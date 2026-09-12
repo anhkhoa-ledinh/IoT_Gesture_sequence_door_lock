@@ -1,0 +1,10 @@
+# Thu vien can cai trong Wokwi Library Manager (tab "Library Manager")
+# Moi dong mot ten, dung y het ten trong Arduino Library Manager.
+# WiFi.h va Wire.h da co san trong ESP32 core, KHONG can them vao day.
+
+PubSubClient
+ArduinoJson
+ESP32Servo
+Adafruit SSD1306
+Adafruit GFX Library
+Adafruit BusIO
