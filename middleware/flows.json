@@ -1,0 +1,564 @@
+[
+  {
+    "id": "tab_gate",
+    "type": "tab",
+    "label": "Khoa cua cu chi",
+    "disabled": false,
+    "info": "He thong IoT 4 tang. Tang 3 middleware: kiem ma, lockout, ghi log."
+  },
+  {
+    "id": "cfg_broker",
+    "type": "mqtt-broker",
+    "name": "HiveMQ public",
+    "broker": "broker.hivemq.com",
+    "port": "1883",
+    "clientid": "",
+    "autoConnect": true,
+    "usetls": false,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "ui_tab_1",
+    "type": "ui_tab",
+    "name": "Khoa cua cu chi",
+    "icon": "lock",
+    "order": 1,
+    "disabled": false,
+    "hidden": false
+  },
+  {
+    "id": "grp_trangthai",
+    "type": "ui_group",
+    "name": "Trang thai o khoa",
+    "tab": "ui_tab_1",
+    "order": 1,
+    "disp": true,
+    "width": "6",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "grp_dieukhien",
+    "type": "ui_group",
+    "name": "Dieu khien",
+    "tab": "ui_tab_1",
+    "order": 2,
+    "disp": true,
+    "width": "6",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "grp_lichsu",
+    "type": "ui_group",
+    "name": "10 lan truy cap gan nhat",
+    "tab": "ui_tab_1",
+    "order": 3,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "grp_thongke",
+    "type": "ui_group",
+    "name": "Thong ke",
+    "tab": "ui_tab_1",
+    "order": 4,
+    "disp": true,
+    "width": "12",
+    "collapse": false,
+    "className": ""
+  },
+  {
+    "id": "a_in_seq",
+    "type": "mqtt in",
+    "z": "tab_gate",
+    "name": "uplink  .../sequence",
+    "topic": "ueh/ak_majespecter/gate/sequence",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cfg_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 160,
+    "wires": [
+      [
+        "a_kiem_ma"
+      ]
+    ]
+  },
+  {
+    "id": "a_kiem_ma",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Kiem ma + dem so lan sai + lockout",
+    "func": "// =====================================================================\n//  KIEM MA — trai tim cua tang 3 (middleware)\n// ---------------------------------------------------------------------\n//  Vao  : msg.payload = {\"code\":\"E17C4D\",\"ts\":1699}  tu topic .../sequence\n//  Ra 0 : lenh dieu khien gui xuong ESP32 qua .../cmd\n//  Ra 1 : ban ghi 1 lan thu -> ghi log CSV + bang lich su + bieu do\n//  Ra 2 : ket qua lan thu gan nhat -> hien len dashboard\n// =====================================================================\n\nconst TOPIC_CMD         = \"ueh/ak_majespecter/gate/cmd\";\nconst MA_MAC_DINH       = \"E17C4D\";\nconst SO_LAN_SAI_TOI_DA = 3;   // phai khop thresholds.max_attempts\nconst LOCKOUT_GIAY      = 30;  // phai khop thresholds.lockout_sec\nconst TTL_MO_GIAY       = 5;   // phai khop thresholds.unlock_hold_sec\n\n// Ma hop le nam trong flow context chu khong viet cung trong code, de sau nay\n// doi ma luc dang chay ma khong phai sua va deploy lai flow.\nlet maHopLe = flow.get(\"ma_hop_le\");\nif (!maHopLe) {\n    maHopLe = MA_MAC_DINH;\n    flow.set(\"ma_hop_le\", maHopLe);\n}\n\nconst bayGio   = Date.now();\nconst maNhap   = (msg.payload && msg.payload.code ? String(msg.payload.code) : \"\").toUpperCase();\nconst thoiGian = new Date().toLocaleString(\"vi-VN\");\n\n// ---------------------------------------------------------------------\n//  1. DANG LOCKOUT -> BO QUA hoan toan\n// ---------------------------------------------------------------------\n//  Khong dem, khong tra loi lenh nao. Van ghi log de biet co nguoi thu\n//  trong luc dang bi khoa — day la thong tin bao mat dang gia.\nconst lockoutDenKhi = flow.get(\"lockout_den_khi\") || 0;\nif (bayGio < lockoutDenKhi) {\n    const conLai = Math.ceil((lockoutDenKhi - bayGio) / 1000);\n    node.status({ fill: \"red\", shape: \"ring\", text: \"lockout con \" + conLai + \"s\" });\n    return [\n        null,\n        { payload: {\n            thoi_gian: thoiGian, ma: maNhap,\n            ket_qua: \"BI CHAN (dang lockout)\",\n            so_lan_sai: flow.get(\"so_lan_sai\") || 0, mau: \"#ff9800\"\n        } },\n        { payload: { chu: \"BI CHAN\", phu: \"dang lockout, con \" + conLai + \"s\", mau: \"#9c27b0\" } }\n    ];\n}\n\n// ---------------------------------------------------------------------\n//  2. MA DUNG -> mo khoa\n// ---------------------------------------------------------------------\nif (maNhap === maHopLe) {\n    flow.set(\"so_lan_sai\", 0);                                   // xoa bo dem sai\n    flow.set(\"dem_thanh_cong\", (flow.get(\"dem_thanh_cong\") || 0) + 1);\n    node.status({ fill: \"green\", shape: \"dot\", text: \"dung ma -> mo khoa\" });\n    return [\n        { topic: TOPIC_CMD, payload: { action: \"unlock\", ttl: TTL_MO_GIAY } },\n        { payload: {\n            thoi_gian: thoiGian, ma: maNhap,\n            ket_qua: \"DUNG — MO KHOA\", so_lan_sai: 0, mau: \"#4caf50\"\n        } },\n        { payload: { chu: \"MO KHOA\", phu: \"tu dong dong sau \" + TTL_MO_GIAY + \"s\", mau: \"#4caf50\" } }\n    ];\n}\n\n// ---------------------------------------------------------------------\n//  3. MA SAI -> tang bo dem\n// ---------------------------------------------------------------------\nconst soLanSai = (flow.get(\"so_lan_sai\") || 0) + 1;\nflow.set(\"so_lan_sai\", soLanSai);\nflow.set(\"dem_that_bai\", (flow.get(\"dem_that_bai\") || 0) + 1);\n\n// --- Du so lan sai -> lockout ---\nif (soLanSai >= SO_LAN_SAI_TOI_DA) {\n    flow.set(\"lockout_den_khi\", bayGio + LOCKOUT_GIAY * 1000);\n\n    // Sau LOCKOUT_GIAY giay tu mo co va xoa bo dem.\n    // Moc thoi gian 'lockout_den_khi' moi la can cu chinh — neu Node-RED bi\n    // khoi dong lai giua chung lam mat hen gio nay thi phep so sanh o muc 1\n    // van chan dung, khong bi ho.\n    setTimeout(function () {\n        flow.set(\"lockout_den_khi\", 0);\n        flow.set(\"so_lan_sai\", 0);\n        node.send([null, null, { payload: {\n            chu: \"SAN SANG\", phu: \"het lockout, thu lai duoc\", mau: \"#607d8b\"\n        } }]);\n    }, LOCKOUT_GIAY * 1000);\n\n    node.status({ fill: \"red\", shape: \"dot\", text: \"sai \" + soLanSai + \" lan -> LOCKOUT\" });\n    return [\n        { topic: TOPIC_CMD, payload: { action: \"lockout\", sec: LOCKOUT_GIAY } },\n        { payload: {\n            thoi_gian: thoiGian, ma: maNhap,\n            ket_qua: \"SAI LAN \" + soLanSai + \" — LOCKOUT \" + LOCKOUT_GIAY + \"s\",\n            so_lan_sai: soLanSai, mau: \"#f44336\"\n        } },\n        { payload: { chu: \"LOCKOUT\", phu: \"khoa \" + LOCKOUT_GIAY + \" giay\", mau: \"#f44336\" } }\n    ];\n}\n\n// --- Sai nhung chua du so lan -> chi tu choi ---\nnode.status({ fill: \"yellow\", shape: \"dot\", text: \"sai \" + soLanSai + \"/\" + SO_LAN_SAI_TOI_DA });\nreturn [\n    { topic: TOPIC_CMD, payload: { action: \"deny\" } },\n    { payload: {\n        thoi_gian: thoiGian, ma: maNhap,\n        ket_qua: \"SAI (lan \" + soLanSai + \"/\" + SO_LAN_SAI_TOI_DA + \")\",\n        so_lan_sai: soLanSai, mau: \"#ff9800\"\n    } },\n    { payload: { chu: \"TU CHOI\", phu: \"sai \" + soLanSai + \"/\" + SO_LAN_SAI_TOI_DA, mau: \"#ff9800\" } }\n];",
+    "outputs": 3,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 200,
+    "wires": [
+      [
+        "a_out_cmd"
+      ],
+      [
+        "b_csv_prep",
+        "b_lich_su",
+        "b_bieu_do"
+      ],
+      [
+        "ui_ket_qua"
+      ]
+    ]
+  },
+  {
+    "id": "a_out_cmd",
+    "type": "mqtt out",
+    "z": "tab_gate",
+    "name": "downlink  .../cmd",
+    "topic": "",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "cfg_broker",
+    "x": 800,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "b_csv_prep",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Chuan bi dong CSV",
+    "func": "// =====================================================================\n//  CHUAN BI 1 DONG CHO access_log.csv\n// ---------------------------------------------------------------------\n//  Tra ve object phang; node 'csv' phia sau se doi thanh dong CSV va tu\n//  them dong tieu de o lan ghi dau tien.\n//  Dung ISO 8601 cho cot timestamp de Excel va pandas deu doc duoc.\n// =====================================================================\nreturn {\n    payload: {\n        timestamp:            new Date().toISOString(),\n        ma_nhap:              msg.payload.ma,\n        ket_qua:              msg.payload.ket_qua,\n        so_lan_sai_lien_tiep: msg.payload.so_lan_sai\n    }\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 800,
+    "y": 220,
+    "wires": [
+      [
+        "b_csv"
+      ]
+    ]
+  },
+  {
+    "id": "b_csv",
+    "type": "csv",
+    "z": "tab_gate",
+    "name": "",
+    "spec": "rfc",
+    "sep": ",",
+    "hdrin": false,
+    "hdrout": "once",
+    "multi": "one",
+    "ret": "\\n",
+    "temp": "timestamp,ma_nhap,ket_qua,so_lan_sai_lien_tiep",
+    "skip": "0",
+    "strings": true,
+    "include_empty_strings": false,
+    "include_null_values": false,
+    "x": 1010,
+    "y": 220,
+    "wires": [
+      [
+        "b_file"
+      ]
+    ]
+  },
+  {
+    "id": "b_file",
+    "type": "file",
+    "z": "tab_gate",
+    "name": "access_log.csv",
+    "filename": "D:\\IoT_Gesture_sequence_door_lock\\middleware\\access_log.csv",
+    "filenameType": "str",
+    "appendNewline": false,
+    "createDir": true,
+    "overwriteFile": "false",
+    "encoding": "utf8",
+    "x": 1210,
+    "y": 220,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "b_lich_su",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Giu 10 ban ghi gan nhat",
+    "func": "// =====================================================================\n//  BANG 10 LAN TRUY CAP GAN NHAT\n// ---------------------------------------------------------------------\n//  Giu danh sach trong flow context roi day CA MANG len ui_template.\n//  Ban ghi moi nhat nam tren cung.\n// =====================================================================\nlet ds = flow.get(\"lich_su\") || [];\nds.unshift(msg.payload);\nif (ds.length > 10) {\n    ds = ds.slice(0, 10);\n}\nflow.set(\"lich_su\", ds);\nreturn { payload: ds };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 800,
+    "y": 280,
+    "wires": [
+      [
+        "ui_lich_su"
+      ]
+    ]
+  },
+  {
+    "id": "b_bieu_do",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Dem thanh cong / that bai",
+    "func": "// =====================================================================\n//  BIEU DO SO LAN THANH CONG / THAT BAI\n// ---------------------------------------------------------------------\n//  ui_chart dang cot phan biet cac cot bang msg.topic, nen phai gui\n//  hai ban tin rieng chu khong gui mot object gop.\n// =====================================================================\nnode.send({ topic: \"Thanh cong\", payload: flow.get(\"dem_thanh_cong\") || 0 });\nnode.send({ topic: \"That bai\",   payload: flow.get(\"dem_that_bai\")   || 0 });\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 800,
+    "y": 340,
+    "wires": [
+      [
+        "ui_bieu_do"
+      ]
+    ]
+  },
+  {
+    "id": "c_in_state",
+    "type": "mqtt in",
+    "z": "tab_gate",
+    "name": "uplink  .../state",
+    "topic": "ueh/ak_majespecter/gate/state",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "cfg_broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 440,
+    "wires": [
+      [
+        "c_doc_state"
+      ]
+    ]
+  },
+  {
+    "id": "c_doc_state",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Doc trang thai ESP32",
+    "func": "// =====================================================================\n//  DOC .../state DO ESP32 GUI LEN\n// ---------------------------------------------------------------------\n//  payload: {\"lock\":\"open\",\"attempts\":1,\"uptime\":123}\n//  Day la trang thai THAT cua o khoa — coi day la can cu, khong phai\n//  ket qua kiem ma ben Node-RED (ket qua do hien o o widget rieng).\n// =====================================================================\nconst p = msg.payload || {};\n\n// Ghi lai luc nghe duoc, dung cho phan theo doi thiet bi con song.\nflow.set(\"esp_lan_cuoi\", Date.now());\n\nlet chu = \"DA KHOA\";\nlet mau = \"#f44336\";          // do\nif (p.lock === \"open\")    { chu = \"DA MO\";   mau = \"#4caf50\"; }   // xanh la\nif (p.lock === \"lockout\") { chu = \"LOCKOUT\"; mau = \"#9c27b0\"; }   // tim\n\nreturn {\n    payload: {\n        chu: chu,\n        phu: \"ESP32 bao: \" + p.lock + \" | sai \" + (p.attempts || 0)\n             + \" lan | uptime \" + (p.uptime || 0) + \"s\",\n        mau: mau\n    }\n};",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 440,
+    "wires": [
+      [
+        "ui_khoa"
+      ]
+    ]
+  },
+  {
+    "id": "c_nhip",
+    "type": "inject",
+    "z": "tab_gate",
+    "name": "moi 5 giay",
+    "props": [],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "2",
+    "topic": "",
+    "x": 160,
+    "y": 520,
+    "wires": [
+      [
+        "c_watchdog"
+      ]
+    ]
+  },
+  {
+    "id": "c_watchdog",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "ESP32 con song khong",
+    "func": "// =====================================================================\n//  THEO DOI ESP32 CON SONG KHONG\n// ---------------------------------------------------------------------\n//  Firmware publish .../state deu dan moi 5 giay. Qua 15 giay (lo 3 nhip)\n//  khong nghe gi thi coi nhu mat ket noi.\n//  Node inject phia truoc kich hoat ham nay moi 5 giay.\n// =====================================================================\nconst lanCuoi = flow.get(\"esp_lan_cuoi\") || 0;\n\nif (!lanCuoi) {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"chua nghe thay ESP32\" });\n    return { payload: \"CHUA NHAN DUOC TIN NAO TU ESP32\" };\n}\n\nconst giay = Math.round((Date.now() - lanCuoi) / 1000);\nif (giay > 15) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"mat ket noi \" + giay + \"s\" });\n    return { payload: \"MAT KET NOI (\" + giay + \"s truoc)\" };\n}\n\nnode.status({ fill: \"green\", shape: \"dot\", text: \"online\" });\nreturn { payload: \"ONLINE (nghe \" + giay + \"s truoc)\" };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 520,
+    "wires": [
+      [
+        "ui_ket_noi"
+      ]
+    ]
+  },
+  {
+    "id": "d_nut_khancap",
+    "type": "ui_button",
+    "z": "tab_gate",
+    "name": "",
+    "group": "grp_dieukhien",
+    "order": 1,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "label": "MO KHAN CAP",
+    "tooltip": "Downlink thu hai: dashboard ra lenh thang xuong ESP32",
+    "color": "white",
+    "bgcolor": "#2196f3",
+    "className": "",
+    "icon": "lock_open",
+    "payload": "",
+    "payloadType": "str",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 620,
+    "wires": [
+      [
+        "d_fn_khancap"
+      ]
+    ]
+  },
+  {
+    "id": "d_fn_khancap",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Lenh mo khan cap",
+    "func": "// =====================================================================\n//  MO KHAN CAP TU DASHBOARD\n// ---------------------------------------------------------------------\n//  Day la LUONG DOWNLINK THU HAI cua he thong: dashboard (tang 4) ra lenh\n//  thang xuong ESP32 (tang 1) qua .../cmd, khong di qua khau nhan dien\n//  cu chi. Dung khi camera hong hoac nguoi dung khong lam duoc cu chi.\n//\n//  LUU Y: neu dang trong 30 giay lockout thi FIRMWARE se bo qua lenh nay\n//  (day la chu y — chan ca duong vong). Phai bam \"Reset lockout\" truoc.\n// =====================================================================\nconst TOPIC_CMD = \"ueh/ak_majespecter/gate/cmd\";\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: \"mo khan cap\" });\nreturn [\n    { topic: TOPIC_CMD, payload: { action: \"unlock\", ttl: 5 } },\n    { payload: {\n        thoi_gian: new Date().toLocaleString(\"vi-VN\"),\n        ma: \"(khan cap)\", ket_qua: \"MO TU DASHBOARD\",\n        so_lan_sai: flow.get(\"so_lan_sai\") || 0, mau: \"#2196f3\"\n    } }\n];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 620,
+    "wires": [
+      [
+        "a_out_cmd"
+      ],
+      [
+        "b_csv_prep",
+        "b_lich_su"
+      ]
+    ]
+  },
+  {
+    "id": "d_nut_reset",
+    "type": "ui_button",
+    "z": "tab_gate",
+    "name": "",
+    "group": "grp_dieukhien",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "passthru": false,
+    "label": "RESET LOCKOUT",
+    "tooltip": "Xoa lockout o ca Node-RED lan ESP32",
+    "color": "white",
+    "bgcolor": "#607d8b",
+    "className": "",
+    "icon": "lock_reset",
+    "payload": "",
+    "payloadType": "str",
+    "topic": "",
+    "topicType": "str",
+    "x": 160,
+    "y": 700,
+    "wires": [
+      [
+        "d_fn_reset"
+      ]
+    ]
+  },
+  {
+    "id": "d_fn_reset",
+    "type": "function",
+    "z": "tab_gate",
+    "name": "Xoa lockout hai noi",
+    "func": "// =====================================================================\n//  RESET LOCKOUT\n// ---------------------------------------------------------------------\n//  Lockout duoc giu o HAI noi doc lap, phai xoa ca hai:\n//    1. Node-RED : co 'lockout_den_khi' va bo dem 'so_lan_sai'\n//    2. ESP32    : bien lockoutUntilMs trong firmware\n//\n//  Spec chi cho phep 3 action (unlock / deny / lockout) nen de xoa lockout\n//  o ESP32 ta gui lockout voi sec = 0: firmware dat han la \"ngay bay gio\",\n//  vong loop ke tiep thay da qua han va tu tra ve trang thai khoa binh thuong.\n// =====================================================================\nconst TOPIC_CMD = \"ueh/ak_majespecter/gate/cmd\";\n\nflow.set(\"lockout_den_khi\", 0);\nflow.set(\"so_lan_sai\", 0);\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: \"da reset lockout\" });\nreturn [\n    { topic: TOPIC_CMD, payload: { action: \"lockout\", sec: 0 } },\n    { payload: { chu: \"SAN SANG\", phu: \"da xoa lockout o ca Node-RED va ESP32\", mau: \"#607d8b\" } }\n];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 440,
+    "y": 700,
+    "wires": [
+      [
+        "a_out_cmd"
+      ],
+      [
+        "ui_ket_qua"
+      ]
+    ]
+  },
+  {
+    "id": "ui_khoa",
+    "type": "ui_template",
+    "z": "tab_gate",
+    "group": "grp_trangthai",
+    "name": "Trang thai o khoa",
+    "order": 1,
+    "width": "6",
+    "height": "3",
+    "format": "<div style=\"text-align:center; padding:14px 6px\">\n  <div style=\"font-size:44px; font-weight:700; line-height:1.1;\n              color:{{msg.payload.mau}}\">{{msg.payload.chu}}</div>\n  <div style=\"font-size:12px; color:#9e9e9e; margin-top:8px\">{{msg.payload.phu}}</div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 800,
+    "y": 440,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui_ket_noi",
+    "type": "ui_text",
+    "z": "tab_gate",
+    "group": "grp_trangthai",
+    "order": 2,
+    "width": "6",
+    "height": "1",
+    "name": "Ket noi thiet bi",
+    "label": "ESP32",
+    "format": "{{msg.payload}}",
+    "layout": "row-spread",
+    "className": "",
+    "x": 800,
+    "y": 520,
+    "wires": []
+  },
+  {
+    "id": "ui_ket_qua",
+    "type": "ui_template",
+    "z": "tab_gate",
+    "group": "grp_dieukhien",
+    "name": "Ket qua lan thu gan nhat",
+    "order": 3,
+    "width": "6",
+    "height": "2",
+    "format": "<div style=\"text-align:center; padding:10px 6px\">\n  <div style=\"font-size:26px; font-weight:600;\n              color:{{msg.payload.mau}}\">{{msg.payload.chu}}</div>\n  <div style=\"font-size:12px; color:#9e9e9e; margin-top:6px\">{{msg.payload.phu}}</div>\n</div>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 800,
+    "y": 380,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui_lich_su",
+    "type": "ui_template",
+    "z": "tab_gate",
+    "group": "grp_lichsu",
+    "name": "Bang 10 lan gan nhat",
+    "order": 1,
+    "width": "12",
+    "height": "6",
+    "format": "<table style=\"width:100%; border-collapse:collapse; font-size:13px\">\n  <tr style=\"text-align:left; border-bottom:1px solid #555\">\n    <th style=\"padding:4px\">Thoi gian</th>\n    <th style=\"padding:4px\">Ma nhap</th>\n    <th style=\"padding:4px\">Ket qua</th>\n    <th style=\"padding:4px; text-align:center\">Sai lien tiep</th>\n  </tr>\n  <tr ng-repeat=\"r in msg.payload\" style=\"border-bottom:1px solid #333\">\n    <td style=\"padding:4px; white-space:nowrap\">{{r.thoi_gian}}</td>\n    <td style=\"padding:4px; font-family:monospace\">{{r.ma}}</td>\n    <td style=\"padding:4px; color:{{r.mau}}\">{{r.ket_qua}}</td>\n    <td style=\"padding:4px; text-align:center\">{{r.so_lan_sai}}</td>\n  </tr>\n  <tr ng-if=\"!msg.payload || msg.payload.length === 0\">\n    <td colspan=\"4\" style=\"padding:10px; color:#777\">chua co lan truy cap nao</td>\n  </tr>\n</table>",
+    "storeOutMessages": true,
+    "fwdInMessages": true,
+    "resendOnRefresh": true,
+    "templateScope": "local",
+    "className": "",
+    "x": 1030,
+    "y": 280,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ui_bieu_do",
+    "type": "ui_chart",
+    "z": "tab_gate",
+    "name": "",
+    "group": "grp_thongke",
+    "order": 1,
+    "width": "12",
+    "height": "5",
+    "label": "So lan thanh cong / that bai",
+    "chartType": "bar",
+    "legend": "false",
+    "xformat": "HH:mm:ss",
+    "interpolate": "linear",
+    "nodata": "chua co lan thu nao",
+    "dot": false,
+    "ymin": "",
+    "ymax": "",
+    "removeOlder": 1,
+    "removeOlderPoints": "",
+    "removeOlderUnit": "3600",
+    "cutout": 0,
+    "useOneColor": false,
+    "useUTC": false,
+    "colors": [
+      "#4caf50",
+      "#f44336",
+      "#ff9800",
+      "#2196f3",
+      "#9c27b0",
+      "#607d8b",
+      "#00bcd4",
+      "#8bc34a",
+      "#795548"
+    ],
+    "outputs": 1,
+    "useDifferentColor": false,
+    "className": "",
+    "x": 1030,
+    "y": 340,
+    "wires": [
+      []
+    ]
+  }
+]

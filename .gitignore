@@ -13,3 +13,6 @@ demo/*.mp4
 
 # Model MediaPipe tu tai ve lan chay dau (7.6 MB, co URL trong README)
 vision/model/*.task
+
+# Log truy cap do Node-RED ghi ra luc chay
+middleware/access_log.csv
