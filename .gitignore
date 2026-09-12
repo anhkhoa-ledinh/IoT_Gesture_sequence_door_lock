@@ -1,0 +1,12 @@
+# Moi truong ao conda tao bang --prefix trong thu muc du an (rat nang, khong commit)
+.conda/
+
+# Python
+__pycache__/
+*.pyc
+
+# Video demo (nang, upload rieng)
+demo/*.mp4
+
+# Jupyter
+.ipynb_checkpoints/
