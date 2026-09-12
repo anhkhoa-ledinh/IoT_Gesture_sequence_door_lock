@@ -194,7 +194,18 @@ IoT_Gesture_sequence_door_lock\
 
 ---
 
-## 9. Môi trường đã kiểm chứng
+## 9. Tài liệu
+
+| File | Nội dung |
+|---|---|
+| [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) | **Đọc file này trước.** Các bước chạy theo đúng thứ tự, kèm cách xử lý sự cố |
+| [docs/KIEN_TRUC_4_TANG.md](docs/KIEN_TRUC_4_TANG.md) | Mô tả từng tầng, luồng uplink/downlink cụ thể, vì sao phải tách hai máy |
+| [docs/MQTT_TOPICS.md](docs/MQTT_TOPICS.md) | Bảng topic, payload mẫu, lệnh `mosquitto_pub`/`sub` để tự kiểm tra |
+| [docs/TEST_CASES.md](docs/TEST_CASES.md) | 18 kịch bản test, cột kết quả để trống cho bạn tự điền |
+
+---
+
+## 10. Môi trường đã kiểm chứng
 
 ```
 D:\IoT_Gesture_sequence_door_lock\.conda\python.exe
