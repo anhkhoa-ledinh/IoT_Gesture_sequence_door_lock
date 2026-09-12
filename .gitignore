@@ -10,3 +10,6 @@ demo/*.mp4
 
 # Jupyter
 .ipynb_checkpoints/
+
+# Model MediaPipe tu tai ve lan chay dau (7.6 MB, co URL trong README)
+vision/model/*.task
