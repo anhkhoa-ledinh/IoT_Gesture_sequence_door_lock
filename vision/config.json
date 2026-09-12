@@ -1,0 +1,78 @@
+{
+  "_note": "Nguon duy nhat cho moi tham so cua he thong. KHONG hardcode lai trong code Python.",
+  "_todo_mssv": "TODO: doi 'ueh/ak_majespecter/gate/' thanh 'ueh/<MSSV that>/gate/' khi co MSSV. Chi can sua o mqtt.topic_prefix.",
+
+  "mqtt": {
+    "broker": "broker.hivemq.com",
+    "port": 1883,
+    "keepalive": 60,
+    "client_id_prefix": "gatevision-",
+    "topic_prefix": "ueh/ak_majespecter/gate/",
+    "topics": {
+      "gesture": "gesture",
+      "sequence": "sequence",
+      "cmd": "cmd",
+      "state": "state"
+    },
+    "_huong": {
+      "gesture": "uplink  : Python -> broker",
+      "sequence": "uplink  : Python -> broker",
+      "cmd": "downlink: Node-RED -> ESP32",
+      "state": "uplink  : ESP32 -> broker"
+    }
+  },
+
+  "camera": {
+    "camera_index": 0,
+    "frame_width": 640,
+    "frame_height": 480
+  },
+
+  "gestures": [
+    { "class_id": 0, "label": "fist",     "hex": "3A", "desc": "nam tay" },
+    { "class_id": 1, "label": "palm",     "hex": "7C", "desc": "xoe ban tay" },
+    { "class_id": 2, "label": "victory",  "hex": "E1", "desc": "chu V" },
+    { "class_id": 3, "label": "thumb_up", "hex": "B9", "desc": "ngon cai len" },
+    { "class_id": 4, "label": "point_up", "hex": "05", "desc": "chi tay len" },
+    { "class_id": 5, "label": "ok",       "hex": "4D", "desc": "vong tron OK" },
+    { "class_id": 6, "label": "none",     "hex": null, "desc": "khong hop le / chuyen tiep" }
+  ],
+
+  "thresholds": {
+    "stable_frames": 15,
+    "min_confidence": 0.70,
+    "none_gap_frames": 10,
+    "sequence_timeout_sec": 10,
+    "code_length": 3,
+    "max_attempts": 3,
+    "lockout_sec": 30,
+    "servo_closed_deg": 0,
+    "servo_open_deg": 90,
+    "unlock_hold_sec": 5
+  },
+
+  "secret": {
+    "default_code": "E17C4D",
+    "_giai_thich": "victory(E1) -> palm(7C) -> ok(4D). Ma that duoc giu trong flow context cua Node-RED."
+  },
+
+  "model": {
+    "hand_landmarker_task": "model/hand_landmarker.task",
+    "hand_landmarker_url": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
+    "keypoint_csv": "model/keypoint.csv",
+    "classifier_keras": "model/gesture_classifier.keras",
+    "classifier_tflite": "model/gesture_classifier.tflite",
+    "num_hands": 1
+  },
+
+  "collect": {
+    "burst_samples": 30,
+    "burst_frame_step": 2
+  },
+
+  "_dong_bo_tay": [
+    "thresholds.servo_closed_deg / servo_open_deg / unlock_hold_sec  -> dung trong firmware/gate_lock.ino",
+    "thresholds.max_attempts / lockout_sec                            -> dung trong middleware/flows.json",
+    "File .ino va Node-RED khong doc duoc config.json nay, phai sua tay cho khop."
+  ]
+}
