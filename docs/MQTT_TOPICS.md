@@ -3,7 +3,7 @@
 **Broker:** `broker.hivemq.com`  **Port:** `1883`  **Xác thực:** không
 **Giao thức:** MQTT 3.1.1  **QoS:** 0  **Retain:** không
 
-**Prefix topic:** `ueh/ak_majespecter/gate/`
+**Prefix topic:** `huit/ak_majespecter/gate/`
 
 > **TODO — MSSV:** đang dùng `ak_majespecter` tạm. Khi có MSSV thật phải sửa **ba** nơi:
 > 1. `mqtt.topic_prefix` trong `vision/config.json`
@@ -25,7 +25,7 @@
 
 ## 2. `.../gesture` — uplink
 
-**Đầy đủ:** `ueh/ak_majespecter/gate/gesture`
+**Đầy đủ:** `huit/ak_majespecter/gate/gesture`
 **Publish bởi:** `MqttPublisher.publish_gesture()` trong `vision/gesture_lock.py`
 **Mục đích:** báo vừa chấp nhận một cử chỉ. ESP32 nghe để hiện chuỗi đang nhập lên OLED.
 
@@ -57,7 +57,7 @@
 
 ## 3. `.../sequence` — uplink, luồng uplink chính
 
-**Đầy đủ:** `ueh/ak_majespecter/gate/sequence`
+**Đầy đủ:** `huit/ak_majespecter/gate/sequence`
 **Publish bởi:** `MqttPublisher.publish_sequence()` trong `vision/gesture_lock.py`
 **Subscribe bởi:** node `uplink .../sequence` trong `middleware/flows.json`
 
@@ -86,7 +86,7 @@ Ví dụ chuỗi sai:
 
 ## 4. `.../cmd` — downlink
 
-**Đầy đủ:** `ueh/ak_majespecter/gate/cmd`
+**Đầy đủ:** `huit/ak_majespecter/gate/cmd`
 **Publish bởi:** function `Kiem ma`, `Lenh mo khan cap`, `Xoa lockout hai noi` trong Node-RED
 **Subscribe bởi:** `onMqttMessage()` trong `firmware/gate_lock.ino`
 
@@ -141,7 +141,7 @@ lockout ở phía ESP32 mà không cần thêm action thứ tư ngoài spec.
 
 ## 5. `.../state` — uplink
 
-**Đầy đủ:** `ueh/ak_majespecter/gate/state`
+**Đầy đủ:** `huit/ak_majespecter/gate/state`
 **Publish bởi:** `publishState()` trong `firmware/gate_lock.ino`
 **Subscribe bởi:** node `uplink .../state` trong `middleware/flows.json`
 
@@ -199,21 +199,21 @@ và tự sinh ra một mật mã.
 Cài `mosquitto-clients` rồi nghe toàn bộ:
 
 ```bash
-mosquitto_sub -h broker.hivemq.com -p 1883 -t "ueh/ak_majespecter/gate/#" -v
+mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 ```
 
 Giả lập Node-RED ra lệnh mở khóa (ESP32 phải quay servo):
 
 ```bash
 mosquitto_pub -h broker.hivemq.com -p 1883 \
-  -t "ueh/ak_majespecter/gate/cmd" -m '{"action":"unlock","ttl":5}'
+  -t "huit/ak_majespecter/gate/cmd" -m '{"action":"unlock","ttl":5}'
 ```
 
 Giả lập Python gửi mã đúng (Node-RED phải ra lệnh unlock):
 
 ```bash
 mosquitto_pub -h broker.hivemq.com -p 1883 \
-  -t "ueh/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1789220972}'
+  -t "huit/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1789220972}'
 ```
 
 > **Lưu ý:** đây là broker công cộng. Mọi thứ bạn publish, người khác nghe được; và

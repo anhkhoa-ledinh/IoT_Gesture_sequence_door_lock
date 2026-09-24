@@ -269,17 +269,17 @@ tiến trình đếm lại từ đầu.
 
 **Nghe toàn bộ topic:**
 ```bash
-mosquitto_sub -h broker.hivemq.com -p 1883 -t "ueh/ak_majespecter/gate/#" -v
+mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 ```
 
 **Giả lập gửi mã đúng (không cần webcam):**
 ```bash
-mosquitto_pub -h broker.hivemq.com -p 1883 -t "ueh/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1}'
+mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1}'
 ```
 
 **Giả lập mở khóa (không cần Node-RED):**
 ```bash
-mosquitto_pub -h broker.hivemq.com -p 1883 -t "ueh/ak_majespecter/gate/cmd" -m '{"action":"unlock","ttl":5}'
+mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/cmd" -m '{"action":"unlock","ttl":5}'
 ```
 
 **Chạy lại toàn bộ unit test:**

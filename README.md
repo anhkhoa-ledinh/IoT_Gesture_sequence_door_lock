@@ -6,7 +6,7 @@ MediaPipe Hand Landmark Classification and MQTT
 **VI:** Khóa cửa thông minh xác thực bằng chuỗi cử chỉ tay — Hệ thống IoT bốn tầng
 dùng phân loại điểm mốc bàn tay MediaPipe và MQTT
 
-> **TODO — MSSV:** hiện đang dùng prefix tạm `ueh/ak_majespecter/gate/`.
+> **TODO — MSSV:** hiện đang dùng prefix tạm `huit/ak_majespecter/gate/`.
 > Khi có MSSV thật, sửa **một chỗ duy nhất**: `mqtt.topic_prefix` trong
 > [vision/config.json](vision/config.json), rồi sửa cho khớp trong
 > [firmware/gate_lock.ino](firmware/gate_lock.ino) và
@@ -65,7 +65,7 @@ Luồng downlink thứ hai: nút "Mở khẩn cấp" trên Dashboard publish th�
 
 ## 3. Bảng MQTT topic
 
-Broker `broker.hivemq.com`, port `1883`, không auth. Prefix: `ueh/ak_majespecter/gate/`
+Broker `broker.hivemq.com`, port `1883`, không auth. Prefix: `huit/ak_majespecter/gate/`
 
 | Topic | Hướng | Ai publish → ai subscribe | Payload mẫu |
 |---|---|---|---|

@@ -46,7 +46,7 @@ static const uint16_t MQTT_PORT = 1883;
 
 // TODO: doi "ak_majespecter" thanh MSSV that. Phai sua dong bo 3 noi:
 //       vision/config.json  |  firmware/gate_lock.ino (day)  |  middleware/flows.json
-#define TOPIC_PREFIX "ueh/ak_majespecter/gate/"
+#define TOPIC_PREFIX "huit/ak_majespecter/gate/"
 static const char* TOPIC_CMD     = TOPIC_PREFIX "cmd";      // downlink: Node-RED -> ESP32
 static const char* TOPIC_GESTURE = TOPIC_PREFIX "gesture";  // uplink  : Python  -> broker
 static const char* TOPIC_STATE   = TOPIC_PREFIX "state";    // uplink  : ESP32   -> broker

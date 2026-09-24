@@ -30,7 +30,7 @@ Hệ thống gồm **hai thiết bị vật lý tách rời** nói chuyện vớ
                      uplink │                  │ downlink
 ┌─ TẦNG 2 — NETWORK ────────┴──────────────────▼──────────────────────┐
 │  MQTT — broker.hivemq.com:1883, không xác thực                      │
-│  Prefix topic: ueh/ak_majespecter/gate/                             │
+│  Prefix topic: huit/ak_majespecter/gate/                            │
 └──────▲──────────────────────────────────────────────▲───────────────┘
        │ publish                          subscribe   │ publish
 ┌──────┴──────────────────────┐      ┌────────────────┴───────────────┐
@@ -99,9 +99,9 @@ bằng hai nút bấm.
 
 | # | Topic | Ai publish | Ai subscribe | Khi nào |
 |---|---|---|---|---|
-| U1 | `ueh/ak_majespecter/gate/gesture` | laptop (Python) | ESP32 | mỗi khi chấp nhận 1 cử chỉ |
-| U2 | `ueh/ak_majespecter/gate/sequence` | laptop (Python) | Node-RED | khi đủ 3 cử chỉ |
-| U3 | `ueh/ak_majespecter/gate/state` | ESP32 | Node-RED | mỗi 5 giây **và** mỗi khi đổi trạng thái |
+| U1 | `huit/ak_majespecter/gate/gesture` | laptop (Python) | ESP32 | mỗi khi chấp nhận 1 cử chỉ |
+| U2 | `huit/ak_majespecter/gate/sequence` | laptop (Python) | Node-RED | khi đủ 3 cử chỉ |
+| U3 | `huit/ak_majespecter/gate/state` | ESP32 | Node-RED | mỗi 5 giây **và** mỗi khi đổi trạng thái |
 
 **Luồng uplink chính là U2.** Đây là luồng mang dữ liệu cảm biến đã xử lý đi lên
 tầng ra quyết định:
@@ -112,7 +112,7 @@ người dùng làm 3 cử chỉ
   -> MediaPipe trích 21 điểm mốc
   -> MLP phân loại thành victory / palm / ok
   -> ghép thành "E17C4D"
-  -> publish ueh/ak_majespecter/gate/sequence
+  -> publish huit/ak_majespecter/gate/sequence
   -> Node-RED nhận và kiểm mã
 ```
 
@@ -120,15 +120,15 @@ người dùng làm 3 cử chỉ
 
 | # | Topic | Ai publish | Ai subscribe | Khi nào |
 |---|---|---|---|---|
-| D1 | `ueh/ak_majespecter/gate/cmd` | Node-RED (function kiểm mã) | ESP32 | sau mỗi lần kiểm mã |
-| D2 | `ueh/ak_majespecter/gate/cmd` | Node-RED (nút Dashboard) | ESP32 | khi bấm "MỞ KHẨN CẤP" hoặc "RESET LOCKOUT" |
+| D1 | `huit/ak_majespecter/gate/cmd` | Node-RED (function kiểm mã) | ESP32 | sau mỗi lần kiểm mã |
+| D2 | `huit/ak_majespecter/gate/cmd` | Node-RED (nút Dashboard) | ESP32 | khi bấm "MỞ KHẨN CẤP" hoặc "RESET LOCKOUT" |
 
 **Luồng downlink chính là D1:**
 
 ```
 Node-RED so "E17C4D" với mã hợp lệ
   -> khớp
-  -> publish ueh/ak_majespecter/gate/cmd  {"action":"unlock","ttl":5}
+  -> publish huit/ak_majespecter/gate/cmd  {"action":"unlock","ttl":5}
   -> ESP32 nhận, quay servo 90 độ, bật LED xanh
   -> sau 5 giây servo tự về 0 độ
 ```

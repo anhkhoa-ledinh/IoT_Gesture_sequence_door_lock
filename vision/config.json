@@ -1,13 +1,13 @@
 {
   "_note": "Nguon duy nhat cho moi tham so cua he thong. KHONG hardcode lai trong code Python.",
-  "_todo_mssv": "TODO: doi 'ueh/ak_majespecter/gate/' thanh 'ueh/<MSSV that>/gate/' khi co MSSV. Chi can sua o mqtt.topic_prefix.",
+  "_todo_mssv": "TODO: doi 'huit/ak_majespecter/gate/' thanh 'huit/<MSSV that>/gate/' khi co MSSV. Chi can sua o mqtt.topic_prefix.",
 
   "mqtt": {
     "broker": "broker.hivemq.com",
     "port": 1883,
     "keepalive": 60,
     "client_id_prefix": "gatevision-",
-    "topic_prefix": "ueh/ak_majespecter/gate/",
+    "topic_prefix": "huit/ak_majespecter/gate/",
     "topics": {
       "gesture": "gesture",
       "sequence": "sequence",

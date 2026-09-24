@@ -14,7 +14,7 @@ tự ghi, không được điền sẵn.
 
 **Ghi chú khi test:** mở sẵn một cửa sổ nghe toàn bộ topic để đối chiếu:
 ```bash
-mosquitto_sub -h broker.hivemq.com -p 1883 -t "ueh/ak_majespecter/gate/#" -v
+mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 ```
 
 ---
