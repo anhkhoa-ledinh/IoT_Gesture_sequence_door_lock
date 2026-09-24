@@ -16,3 +16,6 @@ vision/model/*.task
 
 # Log truy cap do Node-RED ghi ra luc chay
 middleware/access_log.csv
+
+# pytest cache
+.pytest_cache/
