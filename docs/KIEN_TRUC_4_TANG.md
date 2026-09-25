@@ -37,7 +37,7 @@ Hệ thống gồm **hai thiết bị vật lý tách rời** nói chuyện vớ
 │ TẦNG 1a — SENSING (laptop)  │      │ TẦNG 1b — ACTUATING (ESP32)    │
 │ webcam + MediaPipe + MLP    │      │ servo GPIO18, OLED I2C 21/22,  │
 │ vision/gesture_lock.py      │      │ buzzer GPIO5, LED 25/26        │
-│                             │      │ firmware/gate_lock.ino (Wokwi) │
+│                             │      │ firmware/gate_lock.cpp (Wokwi) │
 └─────────────────────────────┘      └────────────────────────────────┘
 ```
 
@@ -61,7 +61,7 @@ thì Node-RED không bao giờ đếm được số lần sai và cơ chế lock
 
 ### Tầng 1b — Actuating (ESP32 mô phỏng trên Wokwi)
 
-Chạy `firmware/gate_lock.ino`. ESP32 **chỉ nghe lệnh và thi hành**, không tự quyết định:
+Chạy `firmware/gate_lock.cpp`. ESP32 **chỉ nghe lệnh và thi hành**, không tự quyết định:
 
 | Lệnh nhận được | ESP32 làm gì |
 |---|---|
@@ -210,7 +210,7 @@ bằng hai biện pháp phòng thủ ở phía thiết bị:
 | Tầng | Thành phần | Công nghệ | File |
 |---|---|---|---|
 | 1a | Node cảm biến | Python, OpenCV, MediaPipe Tasks, TFLite | `vision/gesture_lock.py` |
-| 1b | Node chấp hành | ESP32 Arduino, PubSubClient, ESP32Servo, Adafruit SSD1306 | `firmware/gate_lock.ino` |
+| 1b | Node chấp hành | ESP32 Arduino, PubSubClient, ESP32Servo, Adafruit SSD1306 | `firmware/gate_lock.cpp` |
 | 2 | Truyền thông | MQTT 3.1.1 qua TCP 1883 | — |
 | 3 | Middleware | Node-RED, function node JavaScript | `middleware/flows.json` |
 | 4 | Giao diện | node-red-dashboard | cùng file `flows.json` |

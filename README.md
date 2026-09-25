@@ -9,7 +9,7 @@ dùng phân loại điểm mốc bàn tay MediaPipe và MQTT
 > **TODO — MSSV:** hiện đang dùng prefix tạm `huit/ak_majespecter/gate/`.
 > Khi có MSSV thật, sửa **một chỗ duy nhất**: `mqtt.topic_prefix` trong
 > [vision/config.json](vision/config.json), rồi sửa cho khớp trong
-> [firmware/gate_lock.ino](firmware/gate_lock.ino) và
+> [firmware/gate_lock.cpp](firmware/gate_lock.cpp) và
 > [middleware/flows.json](middleware/flows.json).
 
 ---
@@ -47,7 +47,7 @@ lại thành mật mã (mặc định `E17C4D`). Node-RED kiểm mã và ra lệ
 ┌──────┴─────────────────────┐      ┌─────────────────┴───────────┐
 │ Tầng 1a — SENSING (laptop) │      │ Tầng 1b — ACTUATING (ESP32) │
 │ webcam + MediaPipe + MLP   │      │ servo, OLED, buzzer, 2 LED  │
-│ vision/gesture_lock.py     │      │ firmware/gate_lock.ino      │
+│ vision/gesture_lock.py     │      │ firmware/gate_lock.cpp      │
 └────────────────────────────┘      └─────────────────────────────┘
 ```
 
@@ -139,7 +139,7 @@ Mở `vision/train_classifier.ipynb`, chạy toàn bộ cell.
 
 ### 6.3. Firmware ESP32
 
-Tạo project mới trên [wokwi.com](https://wokwi.com), dán `firmware/gate_lock.ino` và
+Tạo project mới trên [wokwi.com](https://wokwi.com), dán `firmware/gate_lock.cpp` và
 `firmware/diagram.json`, cài thư viện trong Library Manager (danh sách ở Phase 2).
 
 ### 6.4. Node-RED
@@ -175,7 +175,7 @@ Dự án dùng **MediaPipe Tasks API** (`mediapipe.tasks.python.vision.HandLandm
 IoT_Gesture_sequence_door_lock\
 ├── .conda\                   môi trường Python (không commit)
 ├── firmware\
-│   ├── gate_lock.ino         firmware ESP32
+│   ├── gate_lock.cpp         firmware ESP32
 │   └── diagram.json          sơ đồ nối dây Wokwi
 ├── vision\
 │   ├── config.json           TOÀN BỘ tham số hệ thống

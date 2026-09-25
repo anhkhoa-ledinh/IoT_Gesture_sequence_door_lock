@@ -146,7 +146,7 @@ Mở `vision/train_classifier.ipynb`, chạy toàn bộ cell từ trên xuống
    ```
 
    `WiFi.h` và `Wire.h` có sẵn trong ESP32 core, **không** cần thêm.
-3. Dán nội dung `firmware/gate_lock.ino` vào tab `sketch.ino`.
+3. Dán nội dung `firmware/gate_lock.cpp` vào tab `sketch.ino`.
 4. Dán nội dung `firmware/diagram.json` vào tab `diagram.json`.
 5. Bấm **▶ Start**.
 

@@ -71,7 +71,7 @@
   },
 
   "_dong_bo_tay": [
-    "thresholds.servo_closed_deg / servo_open_deg / unlock_hold_sec  -> dung trong firmware/gate_lock.ino",
+    "thresholds.servo_closed_deg / servo_open_deg / unlock_hold_sec  -> dung trong firmware/gate_lock.cpp",
     "thresholds.max_attempts / lockout_sec                            -> dung trong middleware/flows.json",
     "File .ino va Node-RED khong doc duoc config.json nay, phai sua tay cho khop."
   ]

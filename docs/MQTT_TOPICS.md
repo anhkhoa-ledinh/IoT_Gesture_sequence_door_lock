@@ -7,7 +7,7 @@
 
 > **TODO — MSSV:** đang dùng `ak_majespecter` tạm. Khi có MSSV thật phải sửa **ba** nơi:
 > 1. `mqtt.topic_prefix` trong `vision/config.json`
-> 2. `#define TOPIC_PREFIX` trong `firmware/gate_lock.ino`
+> 2. `#define TOPIC_PREFIX` trong `firmware/gate_lock.cpp`
 > 3. hằng `TOPIC_CMD` trong các function node của `middleware/flows.json`
 
 ---
@@ -88,7 +88,7 @@ Ví dụ chuỗi sai:
 
 **Đầy đủ:** `huit/ak_majespecter/gate/cmd`
 **Publish bởi:** function `Kiem ma`, `Lenh mo khan cap`, `Xoa lockout hai noi` trong Node-RED
-**Subscribe bởi:** `onMqttMessage()` trong `firmware/gate_lock.ino`
+**Subscribe bởi:** `onMqttMessage()` trong `firmware/gate_lock.cpp`
 
 Có **ba** action. Payload dưới đây là output thật khi chạy hàm kiểm mã:
 
@@ -142,7 +142,7 @@ lockout ở phía ESP32 mà không cần thêm action thứ tư ngoài spec.
 ## 5. `.../state` — uplink
 
 **Đầy đủ:** `huit/ak_majespecter/gate/state`
-**Publish bởi:** `publishState()` trong `firmware/gate_lock.ino`
+**Publish bởi:** `publishState()` trong `firmware/gate_lock.cpp`
 **Subscribe bởi:** node `uplink .../state` trong `middleware/flows.json`
 
 ### Payload

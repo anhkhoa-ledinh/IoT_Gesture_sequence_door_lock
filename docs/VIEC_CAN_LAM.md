@@ -86,7 +86,15 @@ thấy servo quay. Chỉ sau đó mới đáng bỏ 1 tiếng thu dữ liệu.
    > Danh sách này cũng nằm ở [`firmware/libraries.txt`](../firmware/libraries.txt).
 
 4. Mở tab **`sketch.ino`** → **chọn hết (Ctrl+A) → xóa** → dán toàn bộ nội dung
-   [`firmware/gate_lock.ino`](../firmware/gate_lock.ino).
+   [`firmware/gate_lock.cpp`](../firmware/gate_lock.cpp).
+
+   > **Vì sao file tên `.cpp` mà dán vào `sketch.ino`?** Trước đây file này tên
+   > `gate_lock.ino`, nhưng bộ chuyển `.ino` → `.cpp` của PlatformIO bị lỗi
+   > (`TypeError: unsupported operand type(s) for -: 'float' and 'NoneType'`) nên
+   > không build được cho đường VS Code. Đổi sang `.cpp` là hết, và file vẫn dán
+   > vào Wokwi web y như cũ — Wokwi nhận **nội dung**, không quan tâm tên file.
+   > Nhờ vậy chỉ có **một** file firmware duy nhất cho cả hai cách, không có bản
+   > sao để lệch nhau.
 5. Mở tab **`diagram.json`** → **chọn hết → xóa** → dán toàn bộ
    [`firmware/diagram.json`](../firmware/diagram.json).
 6. Bấm **▶ Start** (nút tam giác xanh).
@@ -134,7 +142,7 @@ Web IDE tự biên dịch `.ino`; extension thì bạn phải tự build.
 Nên cần **thêm một toolchain build**. Dự án này chọn PlatformIO vì nó tự tải đúng 6
 thư viện, không phải bấm thêm gì.
 
-**Đổi lại bạn được một thứ đáng giá:** `firmware/gate_lock.ino` trở thành **nguồn duy
+**Đổi lại bạn được một thứ đáng giá:** `firmware/gate_lock.cpp` trở thành **nguồn duy
 nhất**. Sửa file là build lại rồi Wokwi tự nạp firmware mới — **không còn phải dán tay**,
 nên cũng không còn rủi ro quên dán lại sau khi đổi prefix (xem cảnh báo cuối mục A).
 
@@ -151,7 +159,7 @@ Ctrl+Shift+X → gõ `platformio` → cài **PlatformIO IDE** (`platformio.platf
 phẩm thương mại, có license miễn phí cho dùng phi thương mại — đọc điều khoản hiện ra
 để tự xác nhận trường hợp của bạn.
 
-**A′3. Build firmware.**
+**A′3. Build firmware. ĐỪNG BỎ QUA BƯỚC NÀY.**
 `F1` → **PlatformIO: Build** (hoặc bấm dấu **✓** trên thanh trạng thái dưới).
 
 Xong phải có hai file:
@@ -159,6 +167,23 @@ Xong phải có hai file:
 .pio/build/esp32dev/firmware.bin
 .pio/build/esp32dev/firmware.elf
 ```
+
+> Bỏ qua bước này là nguyên nhân của lỗi
+> `Wokwi: firmware binary ... not found in workspace`. Thông báo đó trông như lỗi
+> đường dẫn nhưng thật ra chỉ là **chưa có file để mô phỏng**.
+
+Kết quả build đã kiểm chứng trên máy này (PlatformIO Core 6.2.0, espressif32 7.1.3):
+
+```
+RAM:   [=         ]  14.0% (used 45816 bytes from 327680 bytes)
+Flash: [======    ]  61.5% (used 806109 bytes from 1310720 bytes)
+Successfully created esp32 image.
+========================= [SUCCESS] Took 77.15 seconds =========================
+```
+
+Biên dịch sạch, **không một warning** dưới `-Wall`. Sáu thư viện được giải đúng:
+PubSubClient 2.8.0 · ArduinoJson 7.4.3 · ESP32Servo 3.2.1 · Adafruit SSD1306 2.5.17 ·
+Adafruit GFX 1.12.6 · Adafruit BusIO 1.17.4
 
 **A′4. Chỉ cho Wokwi file cấu hình.**
 `F1` → **Wokwi: Select Config File** → chọn `firmware/wokwi.toml`.
@@ -190,7 +215,7 @@ WiFi và MQTT chạy được vì extension có sẵn WiFi gateway (module `wokw
 ### Vòng lặp sửa code từ đây trở đi
 
 ```
-sửa firmware/gate_lock.ino  →  PlatformIO: Build  →  Wokwi tự nạp lại và khởi động lại
+sửa firmware/gate_lock.cpp  →  PlatformIO: Build  →  Wokwi tự nạp lại và khởi động lại
 ```
 
 Extension theo dõi file firmware và tự reload, không phải Start lại bằng tay.
@@ -199,7 +224,7 @@ Extension theo dõi file firmware và tự reload, không phải Start lại b�
 
 | Hiện tượng | Nguyên nhân · Cách sửa |
 |---|---|
-| Wokwi báo **không tìm thấy firmware** | Đường dẫn trong `wokwi.toml` đang tính từ thư mục `firmware/`. Nếu extension tính từ gốc dự án thì **bỏ hai dấu `../`** đi — comment trong file đã ghi sẵn cả hai biến thể. |
+| `Wokwi: firmware binary ../.pio/... not found in workspace` | **Chưa build.** Đây là lỗi hay gặp nhất và nó gây hiểu lầm là lỗi đường dẫn. Extension không tự biên dịch — phải chạy **PlatformIO: Build** (A′3) trước rồi mới Start Simulator. Kiểm bằng `ls .pio/build/esp32dev/firmware.bin`. **Đường dẫn `../` trong `wokwi.toml` là đúng**, đã đối chiếu với code extension 3.7.0 (`getParentFolder(configFileUri)` → giải từ thư mục chứa `wokwi.toml`) — đừng sửa nó. |
 | `PlatformIO: Build` không có trong F1 | Chưa cài xong extension PlatformIO, hoặc chưa reload VS Code. Ctrl+Shift+P → **Developer: Reload Window**. |
 | Build lỗi `Library ... not found` | Sai định danh trong `lib_deps`. Mở [`platformio.ini`](../platformio.ini), so với **PlatformIO Registry** (`platformio.org/lib`). Định danh PlatformIO khác tên trong Arduino Library Manager. |
 | Build lỗi ở `JsonDocument doc;` | ArduinoJson bị giải về bản v6. Kiểm dòng `bblanchon/ArduinoJson@^7.0.0` trong `platformio.ini` — code dùng API v7. |

@@ -1,6 +1,6 @@
 /*
  * ============================================================================
- *  gate_lock.ino  —  TANG 1b: NODE CHAP HANH (ESP32)
+ *  gate_lock.cpp  —  TANG 1b: NODE CHAP HANH (ESP32)
  *  De tai: AI Hand-Gesture Authenticated Smart Door Lock (he thong IoT 4 tang)
  * ----------------------------------------------------------------------------
  *  ESP32 la mot thiet bi DOC LAP voi laptop chay Python. Hai ben khong noi
@@ -16,6 +16,7 @@
  * ============================================================================
  */
 
+#include <Arduino.h>   // .cpp phai tu khai bao, .ino duoc them ngam
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -45,7 +46,7 @@ static const char*    MQTT_HOST = "broker.hivemq.com";
 static const uint16_t MQTT_PORT = 1883;
 
 // TODO: doi "ak_majespecter" thanh MSSV that. Phai sua dong bo 3 noi:
-//       vision/config.json  |  firmware/gate_lock.ino (day)  |  middleware/flows.json
+//       vision/config.json  |  firmware/gate_lock.cpp (day)  |  middleware/flows.json
 #define TOPIC_PREFIX "huit/ak_majespecter/gate/"
 static const char* TOPIC_CMD     = TOPIC_PREFIX "cmd";      // downlink: Node-RED -> ESP32
 static const char* TOPIC_GESTURE = TOPIC_PREFIX "gesture";  // uplink  : Python  -> broker

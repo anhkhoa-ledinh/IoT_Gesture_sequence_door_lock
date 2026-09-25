@@ -22,3 +22,7 @@ middleware/access_log.csv
 
 # PlatformIO build (chi co khi dung extension Wokwi tren VSCode)
 .pio/
+
+# VSCode: PlatformIO sinh c_cpp_properties.json va launch.json chua duong dan
+# tuyet doi cua may, khong nen commit
+.vscode/

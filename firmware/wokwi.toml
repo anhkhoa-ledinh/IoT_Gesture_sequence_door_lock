@@ -1,9 +1,24 @@
 # ============================================================================
 #  wokwi.toml — cau hinh cho extension Wokwi for VS Code
 # ----------------------------------------------------------------------------
-#  File nay dat CANH diagram.json (trong firmware/) de khong phai tao ban sao
-#  thu hai cua diagram.json o goc du an. Extension tim diagram.json cung thu
-#  muc voi wokwi.toml.
+#  File nay dat CANH diagram.json (trong firmware/) — co y, khong phai tinh co.
+#
+#  Extension giai MOI duong dan tuong doi tu THU MUC CHUA FILE NAY, khong phai
+#  tu goc workspace. Da xac nhan trong code extension 3.7.0:
+#
+#      ConfigService.readConfig():
+#          const e = getParentFolder(this.configFileUri)
+#          return this.parseConfig(t, e)          // root = e
+#
+#      sau do:  vscode.Uri.joinPath(c.root, c.wokwi.firmware)
+#               vscode.Uri.joinPath(c.root, "diagram.json")
+#
+#  Hai he qua:
+#    1. diagram.json phai nam CUNG thu muc voi file nay -> dung chung luon
+#       firmware/diagram.json da co, khong phai tao ban sao thu hai.
+#    2. Duong dan firmware bat dau bang '../' de tro ve goc du an, noi
+#       PlatformIO ghi .pio/. joinPath tu chuan hoa '..' nen ket qua la
+#       <goc du an>/.pio/build/esp32dev/firmware.bin
 #
 #  Lan dau chay: F1 -> "Wokwi: Select Config File" -> chon file nay.
 #
@@ -13,12 +28,8 @@
 [wokwi]
 version = 1
 
-# Duong dan file firmware do PlatformIO build ra.
-#
-# Hai duong dan duoi day tinh tu THU MUC CHUA FILE NAY (firmware/).
-# Neu extension bao khong tim thay file, nghia la no tinh tu GOC du an —
-# khi do bo hai dau '../' di:
-#     firmware = '.pio/build/esp32dev/firmware.bin'
-#     elf      = '.pio/build/esp32dev/firmware.elf'
+# Do PlatformIO build ra. Phai chay "PlatformIO: Build" TRUOC khi Start Simulator —
+# extension khong tu bien dich, thieu file nay no bao:
+#   "Wokwi: firmware binary ... not found in workspace"
 firmware = '../.pio/build/esp32dev/firmware.bin'
 elf      = '../.pio/build/esp32dev/firmware.elf'
