@@ -19,3 +19,6 @@ middleware/access_log.csv
 
 # pytest cache
 .pytest_cache/
+
+# PlatformIO build (chi co khi dung extension Wokwi tren VSCode)
+.pio/

@@ -116,6 +116,114 @@ Servo ở góc 0°. Cả hai LED đều tắt.
 | OLED trống hoàn toàn | Dây SDA/SCL sai. Kiểm `oled1:SDA → esp:D21` và `oled1:SCL → esp:D22`. |
 | Servo giật, hoặc buzzer không kêu | Xung đột bộ đếm LEDC giữa `ESP32Servo` và `tone()`. **Báo lại cho tôi** — phương án dự phòng là đổi sang `ledcWriteTone` với kênh cố định. Đây là rủi ro tôi đã lường trước nhưng không kiểm chứng được vì không biên dịch được ở máy. |
 
+---
+
+## A′. Cách khác — extension Wokwi trên VS Code
+
+⏱ **40–60 phút lần đầu** (phần lớn là tải toolchain)
+
+Dùng cách này **hoặc** cách A ở trên, không cần cả hai. Hai file cấu hình đã tạo sẵn:
+[`platformio.ini`](../platformio.ini) và [`firmware/wokwi.toml`](../firmware/wokwi.toml).
+
+### Khác biệt cốt lõi so với web
+
+**Extension VS Code KHÔNG biên dịch code.** Readme của chính nó nói: *"using the
+firmware binaries from your project"* — nó chỉ **mô phỏng** file `.bin` đã build sẵn.
+Web IDE tự biên dịch `.ino`; extension thì bạn phải tự build.
+
+Nên cần **thêm một toolchain build**. Dự án này chọn PlatformIO vì nó tự tải đúng 6
+thư viện, không phải bấm thêm gì.
+
+**Đổi lại bạn được một thứ đáng giá:** `firmware/gate_lock.ino` trở thành **nguồn duy
+nhất**. Sửa file là build lại rồi Wokwi tự nạp firmware mới — **không còn phải dán tay**,
+nên cũng không còn rủi ro quên dán lại sau khi đổi prefix (xem cảnh báo cuối mục A).
+
+### Làm gì
+
+**A′1. Cài extension PlatformIO IDE.**
+Ctrl+Shift+X → gõ `platformio` → cài **PlatformIO IDE** (`platformio.platformio-ide`).
+
+> ⚠️ Lần build đầu PlatformIO tải toolchain ESP32 khoảng **300–500 MB**. Cần mạng tốt
+> và khoảng 15–25 phút. Đây là lý do chính khiến cách này lâu hơn web.
+
+**A′2. Kích hoạt license Wokwi.**
+`F1` → **Wokwi: Request a New License** → làm theo trang web mở ra. Extension là sản
+phẩm thương mại, có license miễn phí cho dùng phi thương mại — đọc điều khoản hiện ra
+để tự xác nhận trường hợp của bạn.
+
+**A′3. Build firmware.**
+`F1` → **PlatformIO: Build** (hoặc bấm dấu **✓** trên thanh trạng thái dưới).
+
+Xong phải có hai file:
+```
+.pio/build/esp32dev/firmware.bin
+.pio/build/esp32dev/firmware.elf
+```
+
+**A′4. Chỉ cho Wokwi file cấu hình.**
+`F1` → **Wokwi: Select Config File** → chọn `firmware/wokwi.toml`.
+
+> Vì sao `wokwi.toml` nằm trong `firmware/` chứ không ở gốc: extension tìm
+> `diagram.json` **cùng thư mục** với `wokwi.toml`. Đặt ở đó thì dùng chung luôn
+> `firmware/diagram.json` đã có, không phải tạo bản sao thứ hai — bản sao là chỗ hai
+> file lệch nhau về sau.
+
+**A′5. Chạy.**
+`F1` → **Wokwi: Start Simulator**.
+
+### Kết quả đúng
+
+Panel mô phỏng mở trong VS Code, hiện đúng sơ đồ mạch, và OLED hiện **cùng 5 dòng** như
+cách A:
+
+```
+WiFi:OK  MQTT:OK
+READY - show code
+LOCKED
+CODE __ __ __
+So lan sai: 0
+```
+
+WiFi và MQTT chạy được vì extension có sẵn WiFi gateway (module `wokwigw`, `engine.wasm`)
+— không phải cấu hình thêm gì cho `Wokwi-GUEST` hay `broker.hivemq.com`.
+
+### Vòng lặp sửa code từ đây trở đi
+
+```
+sửa firmware/gate_lock.ino  →  PlatformIO: Build  →  Wokwi tự nạp lại và khởi động lại
+```
+
+Extension theo dõi file firmware và tự reload, không phải Start lại bằng tay.
+
+### Nếu sai
+
+| Hiện tượng | Nguyên nhân · Cách sửa |
+|---|---|
+| Wokwi báo **không tìm thấy firmware** | Đường dẫn trong `wokwi.toml` đang tính từ thư mục `firmware/`. Nếu extension tính từ gốc dự án thì **bỏ hai dấu `../`** đi — comment trong file đã ghi sẵn cả hai biến thể. |
+| `PlatformIO: Build` không có trong F1 | Chưa cài xong extension PlatformIO, hoặc chưa reload VS Code. Ctrl+Shift+P → **Developer: Reload Window**. |
+| Build lỗi `Library ... not found` | Sai định danh trong `lib_deps`. Mở [`platformio.ini`](../platformio.ini), so với **PlatformIO Registry** (`platformio.org/lib`). Định danh PlatformIO khác tên trong Arduino Library Manager. |
+| Build lỗi ở `JsonDocument doc;` | ArduinoJson bị giải về bản v6. Kiểm dòng `bblanchon/ArduinoJson@^7.0.0` trong `platformio.ini` — code dùng API v7. |
+| Build lỗi `ESP32PWM ... not declared` | `ESP32Servo` chưa tải được. Xóa thư mục `.pio/` rồi Build lại. |
+| Wokwi đòi license | Làm A′2. Không có license thì extension không chạy. |
+| Không thấy output `Serial.begin(115200)` | Extension mở serial trong terminal tích hợp riêng. Xem tab **Terminal** hoặc panel Wokwi. |
+| Cần tiết kiệm thời gian / mạng yếu | **Quay về cách A (web wokwi.com).** Web không cần toolchain, không cần license, không tải 500 MB. Về mặt kết quả demo thì hai cách giống nhau. |
+
+### Có nên chọn cách này không
+
+| | Web wokwi.com | Extension VS Code |
+|---|---|---|
+| Cần toolchain | không | **có** — PlatformIO 300–500 MB |
+| Cần license | không | **có** |
+| Setup lần đầu | 20–30 phút | 40–60 phút |
+| Sửa code | **dán tay** mỗi lần | build → tự reload |
+| Nguồn code | bản dán, dễ lệch file gốc | **file gốc, không lệch** |
+| Debug bằng GDB | không | có |
+
+**Nếu chỉ cần demo xong đồ án:** cách A nhanh hơn, ít thứ có thể hỏng hơn.
+**Nếu còn sửa firmware nhiều lần:** cách A′ đáng bỏ công, vì hết phải dán tay.
+
+---
+
 > **⚠️ Nếu bạn đã dựng Wokwi TRƯỚC khi đổi prefix `ueh/` → `huit/`:**
 > code trên Wokwi là bản dán tay, **nó không tự cập nhật theo file trên đĩa**.
 > Phải làm lại bước 4 (dán lại `sketch.ino`). Không dán lại thì ESP32 vẫn nghe topic

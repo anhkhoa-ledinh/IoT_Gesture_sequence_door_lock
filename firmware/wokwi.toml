@@ -1,0 +1,24 @@
+# ============================================================================
+#  wokwi.toml — cau hinh cho extension Wokwi for VS Code
+# ----------------------------------------------------------------------------
+#  File nay dat CANH diagram.json (trong firmware/) de khong phai tao ban sao
+#  thu hai cua diagram.json o goc du an. Extension tim diagram.json cung thu
+#  muc voi wokwi.toml.
+#
+#  Lan dau chay: F1 -> "Wokwi: Select Config File" -> chon file nay.
+#
+#  KHONG can file nay neu ban dung web wokwi.com.
+# ============================================================================
+
+[wokwi]
+version = 1
+
+# Duong dan file firmware do PlatformIO build ra.
+#
+# Hai duong dan duoi day tinh tu THU MUC CHUA FILE NAY (firmware/).
+# Neu extension bao khong tim thay file, nghia la no tinh tu GOC du an —
+# khi do bo hai dau '../' di:
+#     firmware = '.pio/build/esp32dev/firmware.bin'
+#     elf      = '.pio/build/esp32dev/firmware.elf'
+firmware = '../.pio/build/esp32dev/firmware.bin'
+elf      = '../.pio/build/esp32dev/firmware.elf'
