@@ -198,7 +198,8 @@ IoT_Gesture_sequence_door_lock\
 
 | File | Nội dung |
 |---|---|
-| [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) | **Đọc file này trước.** Các bước chạy theo đúng thứ tự, kèm cách xử lý sự cố |
+| [docs/VIEC_CAN_LAM.md](docs/VIEC_CAN_LAM.md) | **Đọc file này trước.** 10 việc cần làm theo thứ tự phụ thuộc, mỗi việc kèm kết quả đúng và cách xử lý khi sai |
+| [docs/HUONG_DAN_CHAY.md](docs/HUONG_DAN_CHAY.md) | Tài liệu tra cứu: lệnh chạy từng thành phần, bảng phím, ý nghĩa overlay |
 | [docs/KIEN_TRUC_4_TANG.md](docs/KIEN_TRUC_4_TANG.md) | Mô tả từng tầng, luồng uplink/downlink cụ thể, vì sao phải tách hai máy |
 | [docs/MQTT_TOPICS.md](docs/MQTT_TOPICS.md) | Bảng topic, payload mẫu, lệnh `mosquitto_pub`/`sub` để tự kiểm tra |
 | [docs/TEST_CASES.md](docs/TEST_CASES.md) | 18 kịch bản test, cột kết quả để trống cho bạn tự điền |
