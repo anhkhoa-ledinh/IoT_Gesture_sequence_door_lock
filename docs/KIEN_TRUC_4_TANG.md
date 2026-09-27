@@ -55,7 +55,7 @@ Chạy `vision/gesture_lock.py`. Ba thành phần tách rời:
 | `SequenceStateMachine` | `(tên lớp, độ tin cậy)` mỗi khung → sự kiện "đã nhận 1 cử chỉ" / "đủ chuỗi 3 cử chỉ". Chỉ chấp nhận khi độ tin cậy ≥ 0.70 và giữ nguyên 15 khung liên tiếp. |
 | `MqttPublisher` | sự kiện → bản tin MQTT. Chạy trên luồng riêng nên không làm treo vòng lặp camera. |
 
-**Tầng này không tự quyết định gì.** Nó chỉ nói "người dùng vừa nhập mã E17C4D",
+**Tầng này không tự quyết định gì.** Nó chỉ nói "người dùng vừa nhập mã 7CE13A",
 còn mã đó đúng hay sai là việc của tầng 3. Đây là chủ ý: nếu Python tự chặn mã sai
 thì Node-RED không bao giờ đếm được số lần sai và cơ chế lockout sẽ vô dụng.
 
@@ -110,8 +110,8 @@ tầng ra quyết định:
 người dùng làm 3 cử chỉ
   -> webcam bắt được
   -> MediaPipe trích 21 điểm mốc
-  -> MLP phân loại thành victory / palm / ok
-  -> ghép thành "E17C4D"
+  -> MLP phân loại thành palm / victory / fist
+  -> ghép thành "7CE13A"
   -> publish huit/ak_majespecter/gate/sequence
   -> Node-RED nhận và kiểm mã
 ```
@@ -126,7 +126,7 @@ người dùng làm 3 cử chỉ
 **Luồng downlink chính là D1:**
 
 ```
-Node-RED so "E17C4D" với mã hợp lệ
+Node-RED so "7CE13A" với mã hợp lệ
   -> khớp
   -> publish huit/ak_majespecter/gate/cmd  {"action":"unlock","ttl":5}
   -> ESP32 nhận, quay servo 90 độ, bật LED xanh

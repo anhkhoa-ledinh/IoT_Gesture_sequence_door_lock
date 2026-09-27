@@ -234,11 +234,11 @@ cd D:\IoT_Gesture_sequence_door_lock
 ### Thao tác chuẩn cho một lần mở khóa
 
 ```
-1. Làm cử chỉ victory, GIỮ YÊN tới khi thanh xanh đầy      (~0.5 giây)
+1. Làm cử chỉ palm, GIỮ YÊN tới khi thanh xanh đầy         (~0.5 giây)
 2. HẠ TAY xuống tới khi thanh cam đầy                       (~0.3 giây)
-3. Làm cử chỉ palm, giữ yên
+3. Làm cử chỉ victory, giữ yên
 4. Hạ tay
-5. Làm cử chỉ ok, giữ yên
+5. Làm cử chỉ fist, giữ yên
 -> servo trên Wokwi quay, LED xanh sáng, OLED "ACCESS GRANTED"
 ```
 
@@ -274,7 +274,7 @@ mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 
 **Giả lập gửi mã đúng (không cần webcam):**
 ```bash
-mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1}'
+mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7CE13A","ts":1}'
 ```
 
 **Giả lập mở khóa (không cần Node-RED):**

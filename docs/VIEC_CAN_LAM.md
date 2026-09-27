@@ -528,7 +528,7 @@ Nếu in `OK - khong co cap lop nao nham nhau qua 10%` → xong, sang việc F.
 Nếu in `CANH BAO`, đọc kỹ dòng cuối cùng:
 
 - In `Cac cu chi trong mat ma khong nam trong cap nham nao` → **chấp nhận được**, đi
-  tiếp. Cặp bị nhầm không nằm trong mật mã `victory → palm → ok` nên không ảnh hưởng
+  tiếp. Cặp bị nhầm không nằm trong mật mã `palm → victory → fist` nên không ảnh hưởng
   demo.
 - In `NGHIEM TRONG: cac cu chi trong mat ma dang nam trong cap bi nham` → **phải xử
   lý**, chọn một trong hai:
@@ -593,11 +593,11 @@ Phím: `Q`/`ESC` thoát · `R` xóa chuỗi đang nhập.
 ### Thao tác chuẩn cho một lần mở khóa
 
 ```
-1. Làm victory, GIỮ YÊN đến khi thanh xanh đầy      (~0.5 giây)
+1. Làm palm, GIỮ YÊN đến khi thanh xanh đầy         (~0.5 giây)
 2. HẠ TAY xuống đến khi thanh cam đầy               (~0.3 giây)
-3. Làm palm, giữ yên
+3. Làm victory, giữ yên
 4. Hạ tay
-5. Làm ok, giữ yên
+5. Làm fist, giữ yên
 → servo trên Wokwi quay, LED xanh, OLED "ACCESS GRANTED",
   dashboard hiện "MO KHOA", bảng lịch sử thêm 1 dòng
 ```
@@ -610,12 +610,12 @@ thanh tiến trình đếm lại từ 0.
 Terminal in:
 
 ```
-[chuoi] nhan 'victory' = E1 (conf 0.94)
-[mqtt] -> huit/ak_majespecter/gate/gesture {"gesture":"victory","hex":"E1",...}
 [chuoi] nhan 'palm' = 7C (conf 0.97)
+[mqtt] -> huit/ak_majespecter/gate/gesture {"gesture":"palm","hex":"7C",...}
+[chuoi] nhan 'victory' = E1 (conf 0.94)
 ...
-[chuoi] DU 3 CU CHI -> ma E17C4D
-[mqtt] -> huit/ak_majespecter/gate/sequence {"code":"E17C4D",...}
+[chuoi] DU 3 CU CHI -> ma 7CE13A
+[mqtt] -> huit/ak_majespecter/gate/sequence {"code":"7CE13A",...}
 ```
 
 Và servo quay.

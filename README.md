@@ -18,7 +18,7 @@ dùng phân loại điểm mốc bàn tay MediaPipe và MQTT
 
 Người dùng thực hiện một **chuỗi 3 cử chỉ tay** trước webcam. Mỗi cử chỉ được phân loại
 bằng MediaPipe HandLandmarker + một MLP nhỏ, rồi ánh xạ thành 1 byte hex. Ghép 3 byte
-lại thành mật mã (mặc định `E17C4D`). Node-RED kiểm mã và ra lệnh mở khóa cho ESP32
+lại thành mật mã (mặc định `7CE13A`). Node-RED kiểm mã và ra lệnh mở khóa cho ESP32
 (mô phỏng trên Wokwi).
 
 ---
@@ -70,7 +70,7 @@ Broker `broker.hivemq.com`, port `1883`, không auth. Prefix: `huit/ak_majespect
 | Topic | Hướng | Ai publish → ai subscribe | Payload mẫu |
 |---|---|---|---|
 | `.../gesture`  | uplink   | Python → Node-RED, ESP32 | `{"gesture":"victory","hex":"E1","conf":0.93,"ts":1699}` |
-| `.../sequence` | uplink   | Python → Node-RED        | `{"code":"E17C4D","ts":1699}` |
+| `.../sequence` | uplink   | Python → Node-RED        | `{"code":"7CE13A","ts":1699}` |
 | `.../cmd`      | downlink | Node-RED → ESP32         | `{"action":"unlock","ttl":5}` / `{"action":"deny"}` / `{"action":"lockout","sec":30}` |
 | `.../state`    | uplink   | ESP32 → Node-RED         | `{"lock":"open","attempts":1,"uptime":123}` |
 
@@ -91,7 +91,7 @@ Broker `broker.hivemq.com`, port `1883`, không auth. Prefix: `huit/ak_majespect
 Lớp `none` **bắt buộc phải có** — nó là trạng thái phân cách giữa hai cử chỉ, giúp
 máy biết bạn đã kết thúc cử chỉ này và chuẩn bị làm cử chỉ tiếp theo.
 
-Mật mã mặc định: `victory → palm → ok` = **`E17C4D`**
+Mật mã mặc định: `palm → victory → fist` = **`7CE13A`**
 
 ---
 

@@ -45,9 +45,9 @@
 ### Ví dụ một chuỗi hoàn chỉnh
 
 ```json
-{"gesture":"victory","hex":"E1","conf":0.93,"ts":1789220966}
-{"gesture":"palm","hex":"7C","conf":0.97,"ts":1789220969}
-{"gesture":"ok","hex":"4D","conf":0.88,"ts":1789220972}
+{"gesture":"palm","hex":"7C","conf":0.97,"ts":1789220966}
+{"gesture":"victory","hex":"E1","conf":0.93,"ts":1789220969}
+{"gesture":"fist","hex":"3A","conf":0.88,"ts":1789220972}
 ```
 
 > Ba payload trên là **định dạng thật** do code sinh ra (đã kiểm chứng), nhưng giá trị
@@ -64,7 +64,7 @@
 ### Payload
 
 ```json
-{"code":"E17C4D","ts":1789220972}
+{"code":"7CE13A","ts":1789220972}
 ```
 
 | Trường | Kiểu | Ý nghĩa |
@@ -190,7 +190,7 @@ chấp nhận một cử chỉ, phải qua ít nhất 10 khung `none` mới nh�
 Không có luật này thì giữ yên một bàn tay 45 khung sẽ bị đếm thành 3 cử chỉ giống nhau
 và tự sinh ra một mật mã.
 
-**Mật mã mặc định:** `victory → palm → ok` = `E17C4D`
+**Mật mã mặc định:** `palm → victory → fist` = `7CE13A`
 
 ---
 
@@ -213,7 +213,7 @@ Giả lập Python gửi mã đúng (Node-RED phải ra lệnh unlock):
 
 ```bash
 mosquitto_pub -h broker.hivemq.com -p 1883 \
-  -t "huit/ak_majespecter/gate/sequence" -m '{"code":"E17C4D","ts":1789220972}'
+  -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7CE13A","ts":1789220972}'
 ```
 
 > **Lưu ý:** đây là broker công cộng. Mọi thứ bạn publish, người khác nghe được; và

@@ -23,10 +23,10 @@ mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 
 | Mã | Kịch bản | Đầu vào | Kết quả mong đợi | Kết quả thực tế | Đạt / Không |
 |---|---|---|---|---|---|
-| **TC-01** | Chuỗi đúng → mở khóa | Làm `victory` → hạ tay → `palm` → hạ tay → `ok`. Mỗi cử chỉ giữ yên ~1 giây. | Python publish `{"code":"E17C4D",...}`. Node-RED publish `{"action":"unlock","ttl":5}`. Servo quay 90°, LED xanh sáng, OLED "ACCESS GRANTED", 1 tiếng bíp. Sau 5 giây servo tự về 0°. Dashboard hiện "ĐÃ MỞ" màu xanh. Bảng lịch sử thêm 1 dòng "DUNG — MO KHOA". | | |
-| **TC-02** | Chuỗi sai → từ chối | Làm `fist` → `fist` → `fist` (mã `3A3A3A`) | Node-RED publish `{"action":"deny"}`. LED đỏ nháy 3 lần, 2 tiếng bíp, OLED "ACCESS DENIED". Servo **không** quay. Dashboard hiện "TỪ CHỐI", ghi "SAI (lan 1/3)". | | |
+| **TC-01** | Chuỗi đúng → mở khóa | Làm `palm` → hạ tay → `victory` → hạ tay → `fist`. Mỗi cử chỉ giữ yên ~1 giây. | Python publish `{"code":"7CE13A",...}`. Node-RED publish `{"action":"unlock","ttl":5}`. Servo quay 90°, LED xanh sáng, OLED "ACCESS GRANTED", 1 tiếng bíp. Sau 5 giây servo tự về 0°. Dashboard hiện "ĐÃ MỞ" màu xanh. Bảng lịch sử thêm 1 dòng "DUNG — MO KHOA". | | |
+| **TC-02** | Chuỗi sai → từ chối | Làm `thumb_up` → `thumb_up` → `thumb_up` (mã `B9B9B9`) | Node-RED publish `{"action":"deny"}`. LED đỏ nháy 3 lần, 2 tiếng bíp, OLED "ACCESS DENIED". Servo **không** quay. Dashboard hiện "TỪ CHỐI", ghi "SAI (lan 1/3)". | | |
 | **TC-03** | Sai 3 lần liên tiếp → lockout | Lặp lại TC-02 ba lần liên tiếp, không xen kẽ lần đúng nào | Lần 1 và 2: `deny`. **Lần 3**: Node-RED publish `{"action":"lockout","sec":30}`. OLED đếm ngược từ 30, LED đỏ **sáng liên tục** (không nháy). Dashboard hiện "LOCKOUT". | | |
-| **TC-04** | Thao tác trong lúc lockout | Ngay sau TC-03, làm **chuỗi ĐÚNG** `victory → palm → ok` | Node-RED **không gửi lệnh nào**. Servo không quay. OLED vẫn đếm ngược. Log ghi "BI CHAN (dang lockout)". Đây là điểm mấu chốt: **mã đúng cũng bị chặn**. | | |
+| **TC-04** | Thao tác trong lúc lockout | Ngay sau TC-03, làm **chuỗi ĐÚNG** `palm → victory → fist` | Node-RED **không gửi lệnh nào**. Servo không quay. OLED vẫn đếm ngược. Log ghi "BI CHAN (dang lockout)". Đây là điểm mấu chốt: **mã đúng cũng bị chặn**. | | |
 | **TC-05** | Hết lockout → dùng lại bình thường | Đợi hết 30 giây rồi làm chuỗi đúng | LED đỏ tắt, OLED về màn hình chờ, bộ đếm sai về 0. Chuỗi đúng mở được khóa như TC-01. | | |
 
 ---
@@ -35,9 +35,9 @@ mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 
 | Mã | Kịch bản | Đầu vào | Kết quả mong đợi | Kết quả thực tế | Đạt / Không |
 |---|---|---|---|---|---|
-| **TC-06** | Timeout giữa chừng | Làm `victory`, hạ tay, làm `palm`, rồi **bỏ đi hơn 10 giây** | Overlay đếm ngược từ 10.0s. Khi về 0: chuỗi `E1 7C __` bị xóa thành `__ __ __`. **Không** publish `.../sequence`. Node-RED không nhận gì. | | |
-| **TC-07** | Tay rời khung hình giữa chừng | Đang giữ `victory` được ~10 khung thì rút tay ra khỏi khung hình | Thanh tiến trình 15 khung tụt về 0. Overlay hiện `NONE 0.00`. Cử chỉ **không** được chấp nhận. Đưa tay lại phải giữ đủ 15 khung từ đầu. | | |
-| **TC-08** | Thiếu khoảng `none` giữa 2 cử chỉ | Làm `victory` xong **giữ nguyên tay**, đổi thẳng sang `palm` mà không hạ tay | Sau khi nhận `victory`, thanh tiến trình chuyển màu cam kèm chữ "HA TAY XUONG". `palm` **không** được nhận cho tới khi có đủ 10 khung `none`. | | |
+| **TC-06** | Timeout giữa chừng | Làm `palm`, hạ tay, làm `victory`, rồi **bỏ đi hơn 10 giây** | Overlay đếm ngược từ 10.0s. Khi về 0: chuỗi `7C E1 __` bị xóa thành `__ __ __`. **Không** publish `.../sequence`. Node-RED không nhận gì. | | |
+| **TC-07** | Tay rời khung hình giữa chừng | Đang giữ `palm` được ~10 khung thì rút tay ra khỏi khung hình | Thanh tiến trình 15 khung tụt về 0. Overlay hiện `NONE 0.00`. Cử chỉ **không** được chấp nhận. Đưa tay lại phải giữ đủ 15 khung từ đầu. | | |
+| **TC-08** | Thiếu khoảng `none` giữa 2 cử chỉ | Làm `palm` xong **giữ nguyên tay**, đổi thẳng sang `victory` mà không hạ tay | Sau khi nhận `palm`, thanh tiến trình chuyển màu cam kèm chữ "HA TAY XUONG". `victory` **không** được nhận cho tới khi có đủ 10 khung `none`. | | |
 | **TC-09** | Cử chỉ mơ hồ, độ tin cậy thấp | Làm một cử chỉ nửa vời, không giống lớp nào (ví dụ co 3 ngón) | Overlay hiện tên lớp với `conf` < 0.70, chữ màu xám. Thanh tiến trình **không** tăng. Không cử chỉ nào được chấp nhận. | | |
 
 ---

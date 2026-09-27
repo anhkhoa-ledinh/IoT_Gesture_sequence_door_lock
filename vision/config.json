@@ -52,8 +52,9 @@
   },
 
   "secret": {
-    "default_code": "E17C4D",
-    "_giai_thich": "victory(E1) -> palm(7C) -> ok(4D). Ma that duoc giu trong flow context cua Node-RED."
+    "default_code": "7CE13A",
+    "_giai_thich": "palm(7C) -> victory(E1) -> fist(3A). Ma that duoc giu trong flow context cua Node-RED.",
+    "_ly_do_doi_ma": "Ma cu victory->palm->ok bi bo vi lop 'ok' nam trong hai trong ba cap nham nhau tren ma tran nham lan: none->ok 15.1% va ok->none 13.3%. Chieu none->ok nguy hiem nhat: mot ban tay vo nghia co the bi ghi nhan thanh mot byte ma va lam hong chuoi dang nhap. Ma moi chi dung ba lop chinh xac cao nhat: palm 92.5%, victory 89.3%, fist 86.1%. Lop 'ok' VAN la cu chi hop le va van nam trong model, chi khong dung trong mat ma."
   },
 
   "model": {
