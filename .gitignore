@@ -26,3 +26,6 @@ middleware/access_log.csv
 # VSCode: PlatformIO sinh c_cpp_properties.json va launch.json chua duong dan
 # tuyet doi cua may, khong nen commit
 .vscode/
+
+# Thu muc chua de bai / prompt goc, khong phai san pham
+P/
