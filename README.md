@@ -154,7 +154,71 @@ D:\IoT_Gesture_sequence_door_lock\.conda\python.exe vision\gesture_lock.py
 
 ---
 
-## 7. Nguồn model MediaPipe
+## 7. Dữ liệu huấn luyện
+
+### 7.1. Dữ liệu tự thu — dùng để HUẤN LUYỆN
+
+Thu bằng `vision/collect_data.py` trên webcam của người làm đồ án.
+File: `vision/model/keypoint.csv` — 2.594 mẫu, lần ghi cuối **26/09/2026**.
+
+| class_id | Lớp | Số mẫu |
+|---|---|---|
+| 0 | `fist` | 358 |
+| 1 | `palm` | 398 |
+| 2 | `victory` | 420 |
+| 3 | `thumb_up` | 377 |
+| 4 | `point_up` | 300 |
+| 5 | `ok` | 374 |
+| 6 | `none` | 367 |
+| | **Tổng** | **2.594** |
+
+Chia 80/20 có phân tầng (`random_state=42`) thành tập train và tập validation.
+Ma trận nhầm lẫn trên tập validation: [docs/confusion_matrix.png](docs/confusion_matrix.png)
+
+### 7.2. HaGRID — dùng làm TẬP KIỂM THỬ ĐỘC LẬP
+
+> **HaGRID KHÔNG được trộn vào tập huấn luyện.**
+
+Model chỉ học từ dữ liệu tự thu ở mục 7.1. HaGRID trả lời một câu hỏi khác:
+*"model có nhận được bàn tay của **người khác**, trong điều kiện chụp khác, hay không?"*
+
+Cờ `USE_HAGRID_FOR_TRAINING` trong `vision/train_classifier.ipynb` **mặc định là `False`**
+đúng vì lý do này. Bật lên `True` thì HaGRID không còn là tập kiểm thử độc lập nữa và
+con số của `vision/eval_external.py` mất ý nghĩa.
+
+File: `vision/model/keypoint_hagrid.csv` — 2.100 mẫu (300 mỗi lớp × 7 lớp), cùng schema
+43 cột với `keypoint.csv`. Metadata truy vết ở `keypoint_hagrid_meta.csv`, báo cáo trích
+xuất ở `extract_report.json`.
+
+Quy trình trích landmark: [kaggle/extract_hagrid_landmarks.ipynb](kaggle/extract_hagrid_landmarks.ipynb)
+(chạy trên Kaggle, đọc trực tiếp từ `/kaggle/input`).
+
+Ánh xạ lớp HaGRID → lớp của dự án:
+
+| HaGRID | → lớp dự án | | HaGRID | → lớp dự án |
+|---|---|---|---|---|
+| `fist` | `fist` | | `one` | `point_up` |
+| `palm` | `palm` | | `ok` | `ok` |
+| `peace` | `victory` | | `no_gesture` | `none` |
+| `like` | `thumb_up` | | | |
+
+Bốn lớp bị loại bỏ có chủ ý: `peace_inverted`, `stop_inverted`, `two_up_inverted`
+(tay úp ngược, hình dạng khác hẳn) và `stop` (lòng bàn tay khép ngón, dễ lẫn với `palm`).
+
+### 7.3. Nguồn và giấy phép HaGRID
+
+> **HaGRID** — HAnd Gesture Recognition Image Dataset.
+> Kapitanov, Kvanchiani, Nagaev, Kraynov, Makhliarchuk.
+> Giấy phép: biến thể **Creative Commons BY-SA 4.0**.
+> Kho chính thức: https://github.com/hukenovs/hagrid
+
+Giấy phép BY-SA yêu cầu **ghi công tác giả** và **giữ nguyên điều kiện chia sẻ** cho
+các tác phẩm phái sinh. Thư mục `vision/model/` chứa landmark trích từ HaGRID, nên nó
+là tác phẩm phái sinh và chịu cùng điều kiện giấy phép này.
+
+---
+
+## 8. Nguồn model MediaPipe
 
 `vision/model/hand_landmarker.task` được tải tự động lần chạy đầu từ:
 
@@ -169,7 +233,7 @@ Dự án dùng **MediaPipe Tasks API** (`mediapipe.tasks.python.vision.HandLandm
 
 ---
 
-## 8. Cấu trúc thư mục
+## 9. Cấu trúc thư mục
 
 ```
 IoT_Gesture_sequence_door_lock\
@@ -194,7 +258,7 @@ IoT_Gesture_sequence_door_lock\
 
 ---
 
-## 9. Tài liệu
+## 10. Tài liệu
 
 | File | Nội dung |
 |---|---|
@@ -206,7 +270,7 @@ IoT_Gesture_sequence_door_lock\
 
 ---
 
-## 10. Môi trường đã kiểm chứng
+## 11. Môi trường đã kiểm chứng
 
 ```
 D:\IoT_Gesture_sequence_door_lock\.conda\python.exe

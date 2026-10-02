@@ -1,0 +1,111 @@
+{
+  "tham_so": {
+    "MAX_PER_CLASS": 300,
+    "BBOX_EXPAND": 0.2,
+    "BBOX_FORMAT": "xywh_norm",
+    "FLIP_TRUOC_MEDIAPIPE": true,
+    "quy_uoc_lat": "cv2.flip(crop, 1) ngay truoc MediaPipe — giong het collect_data.py va gesture_lock.py",
+    "running_mode": "IMAGE",
+    "num_hands": 1,
+    "mediapipe_version": "1.0.1"
+  },
+  "anh_xa_lop": {
+    "fist": {
+      "class_id": 0,
+      "ten_local": "fist"
+    },
+    "palm": {
+      "class_id": 1,
+      "ten_local": "palm"
+    },
+    "peace": {
+      "class_id": 2,
+      "ten_local": "victory"
+    },
+    "like": {
+      "class_id": 3,
+      "ten_local": "thumb_up"
+    },
+    "one": {
+      "class_id": 4,
+      "ten_local": "point_up"
+    },
+    "ok": {
+      "class_id": 5,
+      "ten_local": "ok"
+    },
+    "no_gesture": {
+      "class_id": 6,
+      "ten_local": "none"
+    }
+  },
+  "lop_bi_loai": [
+    "peace_inverted",
+    "stop_inverted",
+    "two_up_inverted",
+    "stop"
+  ],
+  "theo_lop": {
+    "ok": {
+      "da_thu": 365,
+      "thanh_cong": 300,
+      "khong_thay_tay": 65,
+      "bbox_hong": 0
+    },
+    "no_gesture": {
+      "da_thu": 586,
+      "thanh_cong": 300,
+      "khong_thay_tay": 286,
+      "bbox_hong": 0
+    },
+    "fist": {
+      "da_thu": 595,
+      "thanh_cong": 300,
+      "khong_thay_tay": 295,
+      "bbox_hong": 0
+    },
+    "like": {
+      "da_thu": 496,
+      "thanh_cong": 300,
+      "khong_thay_tay": 196,
+      "bbox_hong": 0
+    },
+    "peace": {
+      "da_thu": 383,
+      "thanh_cong": 300,
+      "khong_thay_tay": 83,
+      "bbox_hong": 0
+    },
+    "one": {
+      "da_thu": 374,
+      "thanh_cong": 300,
+      "khong_thay_tay": 74,
+      "bbox_hong": 0
+    },
+    "palm": {
+      "da_thu": 341,
+      "thanh_cong": 300,
+      "khong_thay_tay": 41,
+      "bbox_hong": 0
+    }
+  },
+  "theo_ban_ghi": {
+    "ban_ghi_da_duyet": 486779,
+    "anh_khong_co_trong_ban_30k": 456375,
+    "loi_doc_that": 0,
+    "ann_lech": 0
+  },
+  "chi_muc_anh": {
+    "so_file_anh": 31833,
+    "so_khoa": 31833,
+    "so_trung_ten": 0
+  },
+  "handedness": {
+    "khop": 304,
+    "lech": 1796,
+    "thieu_nhan": 0,
+    "ty_le_khop": 0.14476190476190476,
+    "ghi_chu": "So sanh handedness cua MediaPipe voi truong leading_hand cua HaGRID. Duoi 0.80 la dau hieu nhan handedness khong tin duoc tren anh nay — dung lai kiem tra truoc khi dung so lieu."
+  },
+  "tong_so_mau": 2100
+}
