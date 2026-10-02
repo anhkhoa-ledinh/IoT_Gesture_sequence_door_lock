@@ -175,8 +175,13 @@ def main() -> int:
               f"BBOX_EXPAND={rp['tham_so'].get('BBOX_EXPAND')} | "
               f"mediapipe {rp['tham_so'].get('mediapipe_version')}")
         if ty_le is not None:
-            canh = "  <-- DUOI 80%, so lieu duoi day chua dang tin" if ty_le < 0.80 else ""
-            print(f"khop handedness voi leading_hand: {ty_le:.1%}{canh}")
+            # Con so nay KHONG phai thuoc do chat luong du lieu, va KHONG co nguong.
+            # MediaPipe xac dinh handedness voi gia dinh anh dau vao la anh guong;
+            # anh HaGRID la anh chup binh thuong nen nhan tra ve nguoc tay that.
+            # Vector dac trung khong bi anh huong: lat anh doi dau truc x VA doi nhan,
+            # buoc 2 cua preprocess_landmarks doi dau x lan nua, hai phep triet tieu.
+            print(f"khop handedness voi leading_hand: {ty_le:.1%}  "
+                  f"(thap la dung mong doi, khong anh huong vector - xem README muc 7.2)")
     else:
         print(f"(khong thay {report_json.name} — bo qua phan tham so trich xuat)")
 

@@ -105,7 +105,8 @@
     "lech": 1796,
     "thieu_nhan": 0,
     "ty_le_khop": 0.14476190476190476,
-    "ghi_chu": "So sanh handedness cua MediaPipe voi truong leading_hand cua HaGRID. Duoi 0.80 la dau hieu nhan handedness khong tin duoc tren anh nay — dung lai kiem tra truoc khi dung so lieu."
+    "ghi_chu": "Ty le khop = 14.48%. DAY KHONG PHAI CANH BAO CHAT LUONG DU LIEU. Giai thich: MediaPipe xac dinh handedness voi GIA DINH anh dau vao la anh guong (selfie). Anh HaGRID la anh chup binh thuong, notebook lat them mot lan truoc khi dua vao MediaPipe, nen nhan handedness tra ve NGUOC tay that. Bang doi chieu cho 85.52% nguoc va 14.48% khop - do la DAO DAU HE THONG, khong phai nhieu ngau nhien (nhieu ngau nhien se cho khoang 50%). VECTOR DAC TRUNG KHONG BI ANH HUONG: lat anh doi dau truc x VA doi nhan handedness; buoc 2 cua preprocess_landmarks thay nhan 'Left' nen doi dau x mot lan nua, hai phep triet tieu nhau. Da do: lech toi da 2.98e-07 tren 500 ban tay ngau nhien, dung bang muc lam tron cua float32. Ket luan: 42 cot toa do trong keypoint_hagrid.csv DUNG va so sanh duoc voi du lieu local; chi cot mp_handedness trong keypoint_hagrid_meta.csv la khong dang tin, va khong co model nao doc cot do.",
+    "_y_nghia": "Con so nay do viec notebook lat anh HaGRID trong khi anh HaGRID khong phai anh selfie. No KHONG do chat luong du lieu va KHONG phai tieu chi chan loc."
   },
   "tong_so_mau": 2100
 }

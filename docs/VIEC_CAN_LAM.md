@@ -711,7 +711,7 @@ Không thấy mục Output thì bấm **Save Version** → **Quick Save** → đ
 Cuối Cell 5 in:
 
 ```
-OK — moi lop deu tren 50% va handedness khop tren 80%.
+OK — moi lop deu phat hien tren 50%.
 Tai 3 file tu /kaggle/working ve vision/model/ roi chay eval_external.py
 ```
 
@@ -723,7 +723,7 @@ Cell 5 tự in `*** DUNG LAI — CHUA DUOC DUA SO NAO VAO BAO CAO ***` khi gặp
 | Hiện tượng | Nguyên nhân · Cách sửa |
 |---|---|
 | Một lớp có tỉ lệ phát hiện **dưới 50%** | Theo thứ tự: (1) `BBOX_FORMAT` có đúng với output Cell 1 không; (2) thử tăng `BBOX_EXPAND` từ `0.20` lên `0.30`–`0.40` — bbox sát quá thì MediaPipe bị cắt mất đầu ngón tay. |
-| Tỉ lệ khớp handedness **dưới 80%** | Kiểm `FLIP_TRUOC_MEDIAPIPE` có đang là `True`. Nếu đã `True` mà vẫn thấp, đó là dấu hiệu MediaPipe đọc sai tay trái/phải trên ảnh này (tay nhỏ, xa, mờ) — nghĩa là một phần dữ liệu đã bị lật nhầm và thành nhiễu. Báo lại cho tôi kèm con số. |
+| Tỉ lệ khớp handedness thấp (đo được **14.5%**) | **Không phải lỗi, không cần xử lý.** MediaPipe xác định handedness với giả định ảnh đầu vào là ảnh gương; ảnh HaGRID là ảnh chụp bình thường nên nhãn trả về ngược tay thật. Vector đặc trưng **không bị ảnh hưởng** vì `preprocess_landmarks` bất biến qua phép lật. Giải thích đầy đủ: [README mục 7.2.1](../README.md#721-về-tỉ-lệ-khớp-handedness-1448--không-phải-lỗi-dữ-liệu). Ngưỡng 80% đã bị bỏ khỏi notebook. |
 | `loi_doc_file` gần bằng `da_thu` | Cấu trúc thư mục ảnh của bản HaGRID này khác giả định trong hàm `tim_anh()`. **Đây là lỗi hay gặp nhất.** Báo lại cho tôi kèm output mục 7 của Cell 1 (danh sách thư mục ảnh), tôi sửa hàm tìm ảnh. |
 | `SystemExit: Thieu lop [...]` | Bản HaGRID này đặt tên lớp khác. Báo lại kèm danh sách tên thật ở mục 3 Cell 1. |
 | `pip install mediapipe` hỏng | Chưa bật Internet. Xem G4. |
@@ -778,7 +778,7 @@ là chỗ người chấm hay hỏi tới.
 |---|---|
 | `LOI: chua co ...gesture_classifier.tflite` | Chưa làm E. |
 | `LOI: chua co ...keypoint_hagrid.csv` | Chưa làm G, hoặc chưa copy file vào `vision/model/`. |
-| In `khop handedness ... <-- DUOI 80%` | Số liệu chưa đáng tin. Xem lại bảng "Nếu sai" của việc G. |
+| `fist` có precision thấp trên HaGRID | Đã biết: `none` và `thumb_up` của HaGRID dồn vào `fist` (87% và 76%). Lý do chính là định nghĩa lớp khác nhau — HaGRID `no_gesture` luôn có bàn tay trong khung, còn lớp `none` tự thu gồm cả "không có tay". Không phải lỗi pipeline. |
 | Một cử chỉ trong mật mã dưới 70% ở tập ngoài | Script in `NGHIEM TRONG`. Nghĩa là người khác sẽ rất khó mở khóa này. Đổi mật mã hoặc thu thêm dữ liệu đa dạng hơn. |
 
 ---

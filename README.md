@@ -190,6 +190,36 @@ File: `vision/model/keypoint_hagrid.csv` — 2.100 mẫu (300 mỗi lớp × 7 l
 43 cột với `keypoint.csv`. Metadata truy vết ở `keypoint_hagrid_meta.csv`, báo cáo trích
 xuất ở `extract_report.json`.
 
+### 7.2.1. Về tỉ lệ khớp handedness 14.48% — không phải lỗi dữ liệu
+
+`extract_report.json` ghi `handedness.ty_le_khop = 0.1448`. Con số này **không phải cảnh
+báo chất lượng dữ liệu** và **không có ngưỡng chặn lọc**. Giải thích đầy đủ:
+
+**Vì sao tỉ lệ thấp.** MediaPipe xác định `handedness` với **giả định ảnh đầu vào là ảnh
+gương (selfie)** — đây là quy ước trong tài liệu chính thức của MediaPipe Hands. Pipeline
+local có `cv2.flip` trên khung webcam nên thoả giả định đó. Ảnh HaGRID là ảnh chụp bình
+thường, notebook lật thêm một lần nữa trước khi đưa vào MediaPipe, nên nhãn trả về
+**ngược** tay thật.
+
+Bảng đối chiếu xác nhận đây là **đảo dấu hệ thống**, không phải nhiễu:
+
+| | `leading_hand` = left | `leading_hand` = right |
+|---|---|---|
+| MediaPipe báo `Left` | 146 | **998** |
+| MediaPipe báo `Right` | **798** | 158 |
+
+85.52% ngược, 14.48% khớp. Nếu hai bên đo hai đại lượng không liên quan thì tỉ lệ phải
+quanh 50%.
+
+**Vì sao dữ liệu vẫn đúng.** Lật ảnh đổi dấu trục x **và** đổi nhãn handedness. Bước 2
+của `preprocess_landmarks` thấy nhãn `Left` nên đổi dấu x **một lần nữa** — hai phép
+triệt tiêu nhau. Đã đo trực tiếp: lệch tối đa `2.98e-07` trên 500 bàn tay ngẫu nhiên,
+đúng bằng mức làm tròn của `float32`.
+
+**Kết luận:** 42 cột toạ độ trong `keypoint_hagrid.csv` **đúng** và so sánh được với dữ
+liệu local. Chỉ cột `mp_handedness` trong `keypoint_hagrid_meta.csv` là không đáng tin —
+và không model nào đọc cột đó.
+
 Quy trình trích landmark: [kaggle/extract_hagrid_landmarks.ipynb](kaggle/extract_hagrid_landmarks.ipynb)
 (chạy trên Kaggle, đọc trực tiếp từ `/kaggle/input`).
 
