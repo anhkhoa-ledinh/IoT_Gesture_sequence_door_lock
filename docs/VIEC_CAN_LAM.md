@@ -723,7 +723,7 @@ Cell 5 tự in `*** DUNG LAI — CHUA DUOC DUA SO NAO VAO BAO CAO ***` khi gặp
 | Hiện tượng | Nguyên nhân · Cách sửa |
 |---|---|
 | Một lớp có tỉ lệ phát hiện **dưới 50%** | Theo thứ tự: (1) `BBOX_FORMAT` có đúng với output Cell 1 không; (2) thử tăng `BBOX_EXPAND` từ `0.20` lên `0.30`–`0.40` — bbox sát quá thì MediaPipe bị cắt mất đầu ngón tay. |
-| Tỉ lệ khớp handedness thấp (đo được **14.5%**) | **Không phải lỗi, không cần xử lý.** MediaPipe xác định handedness với giả định ảnh đầu vào là ảnh gương; ảnh HaGRID là ảnh chụp bình thường nên nhãn trả về ngược tay thật. Vector đặc trưng **không bị ảnh hưởng** vì `preprocess_landmarks` bất biến qua phép lật. Giải thích đầy đủ: [README mục 7.2.1](../README.md#721-về-tỉ-lệ-khớp-handedness-1448--không-phải-lỗi-dữ-liệu). Ngưỡng 80% đã bị bỏ khỏi notebook. |
+| Tỉ lệ khớp handedness thấp (đo được **14.5%**) | **Không phải lỗi, không cần xử lý.** MediaPipe xác định handedness với giả định ảnh đầu vào là ảnh gương; ảnh HaGRID là ảnh chụp bình thường nên nhãn trả về ngược tay thật. Vector đặc trưng **không bị ảnh hưởng** vì `preprocess_landmarks` bất biến qua phép lật. Giải thích đầy đủ: [README mục 7.2.2](../README.md#722-về-tỉ-lệ-khớp-handedness-1448--không-phải-lỗi-dữ-liệu). Ngưỡng 80% đã bị bỏ khỏi notebook. |
 | `loi_doc_file` gần bằng `da_thu` | Cấu trúc thư mục ảnh của bản HaGRID này khác giả định trong hàm `tim_anh()`. **Đây là lỗi hay gặp nhất.** Báo lại cho tôi kèm output mục 7 của Cell 1 (danh sách thư mục ảnh), tôi sửa hàm tìm ảnh. |
 | `SystemExit: Thieu lop [...]` | Bản HaGRID này đặt tên lớp khác. Báo lại kèm danh sách tên thật ở mục 3 Cell 1. |
 | `pip install mediapipe` hỏng | Chưa bật Internet. Xem G4. |

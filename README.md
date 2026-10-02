@@ -190,7 +190,92 @@ File: `vision/model/keypoint_hagrid.csv` — 2.100 mẫu (300 mỗi lớp × 7 l
 43 cột với `keypoint.csv`. Metadata truy vết ở `keypoint_hagrid_meta.csv`, báo cáo trích
 xuất ở `extract_report.json`.
 
-### 7.2.1. Về tỉ lệ khớp handedness 14.48% — không phải lỗi dữ liệu
+### 7.2.1. Kết quả đánh giá trên HaGRID
+
+Chạy bằng `vision/eval_external.py`. Ma trận nhầm lẫn:
+[docs/confusion_matrix_hagrid.png](docs/confusion_matrix_hagrid.png)
+
+#### Bốn mức bóc tách
+
+Con số thô trên cả 7 lớp bị kéo xuống bởi hai lớp không đo được đúng (xem giải thích
+ngay dưới bảng). Bóc dần từng lớp đó ra:
+
+| Phạm vi đánh giá | Số mẫu | Độ chính xác |
+|---|---|---|
+| Cả 7 lớp — **con số thô** | 2.100 | **53.8%** |
+| Bỏ lớp `none` | 1.800 | 62.2% |
+| Bỏ `none` + `thumb_up` | 1.500 | 73.1% |
+| **Chỉ 3 cử chỉ trong mật mã** (`palm`, `victory`, `fist`) | 900 | **81.2%** |
+
+#### Khoảng cách generalization thật của hệ thống
+
+| Tập dữ liệu | Số mẫu | Độ chính xác |
+|---|---|---|
+| Validation tự thu (webcam người làm đồ án) | 519 | **83.8%** |
+| HaGRID — chỉ 3 cử chỉ trong mật mã | 900 | **81.2%** |
+| | | **cách nhau 2.6 điểm** |
+
+Đây mới là con số nói đúng về ổ khóa: nó chỉ dùng `palm → victory → fist`, và trên bàn
+tay **người khác** ba cử chỉ đó vẫn đạt 81.2%. Khoảng cách 30 điểm ở con số thô
+(83.8% → 53.8%) gần như toàn bộ nằm ở các lớp ổ khóa **không** dùng.
+
+Báo cáo nên ghi **cả hai**: 53.8% là con số thô trung thực, 81.2% là con số có ý nghĩa
+với chức năng thật.
+
+#### Từng lớp
+
+| Lớp | Recall | Precision | Ghi chú |
+|---|---|---|---|
+| `fist` | 94.7% | 36.3% | precision thấp: xem mục dưới |
+| `palm` | 98.0% | 65.0% | |
+| `victory` | 51.0% | 60.5% | |
+| `thumb_up` | 7.7% | 50.0% | xem giải thích bên dưới |
+| `point_up` | 71.0% | 96.4% | |
+| `ok` | 51.0% | 88.4% | |
+| `none` | **N/A** | **N/A** | **không so sánh được** — xem giải thích bên dưới |
+
+**Lớp `none` — N/A, không phải điểm thấp.** Hai bên định nghĩa khác nhau nên không có
+cơ sở so sánh:
+
+- HaGRID `no_gesture`: **có bàn tay** trong khung, chỉ là không làm cử chỉ nào trong
+  danh sách.
+- Lớp `none` tự thu: gồm cả **tay đang chuyển động giữa hai cử chỉ**, và cả lúc **không
+  có tay** trong khung hình.
+
+Lớp `none` tự thu được thiết kế làm **dấu phân cách** giữa hai cử chỉ, còn `no_gesture`
+của HaGRID là một tư thế tay tĩnh. Đo lớp này trên HaGRID là đo sai thứ, nên bảng ghi
+**N/A** thay vì một con số.
+
+**Lớp `thumb_up` 7.7% — do độ phân giải, không do model.** Ảnh HaGRID chụp người đứng xa
+tới 4 mét: `bbox_area_frac` trung vị chỉ **1.58%** diện tích khung hình (nhỏ nhất
+0.115%). Ở kích thước đó **ngón cái không phân giải nổi**, nên `like` của HaGRID trông
+y như một bàn tay nắm. Cặp `thumb_up → fist` vốn đã có trên dữ liệu local (14.7%), ở đây
+nó bung lên 76%.
+
+**`fist` precision 36.3%.** `fist` được đoán 782 trong 2.100 lần nhưng chỉ 36.3% đúng —
+vì `no_gesture` và `like` của HaGRID đều dồn vào `fist`, cùng một lý do độ phân giải ở
+trên. `fist` nằm trong mật mã, nên đây là điểm cần nêu khi báo cáo về độ bền của hệ
+thống với người dùng khác.
+
+#### Tỉ lệ MediaPipe phát hiện được bàn tay
+
+| Lớp HaGRID | → lớp dự án | Tỉ lệ phát hiện |
+|---|---|---|
+| `palm` | `palm` | 88.0% |
+| `ok` | `ok` | 82.2% |
+| `one` | `point_up` | 80.2% |
+| `peace` | `victory` | 78.3% |
+| `like` | `thumb_up` | 60.5% |
+| `no_gesture` | `none` | **51.2%** |
+| `fist` | `fist` | **50.4%** |
+
+Hai lớp thấp nhất là `fist` (50.4%) và `no_gesture` (51.2%). Nguyên nhân: bộ dò bàn tay
+của MediaPipe **dựa nhiều vào hình dạng các ngón duỗi** để định vị bàn tay, mà đúng hai
+lớp này **không có ngón nào xòe ra**. Cộng thêm bàn tay rất nhỏ trong khung (1.58% diện
+tích), MediaPipe bỏ sót khoảng một nửa số ảnh. Đây là giới hạn của khâu dò bàn tay, xảy
+ra **trước** khi model phân loại được gọi.
+
+### 7.2.2. Về tỉ lệ khớp handedness 14.48% — không phải lỗi dữ liệu
 
 `extract_report.json` ghi `handedness.ty_le_khop = 0.1448`. Con số này **không phải cảnh
 báo chất lượng dữ liệu** và **không có ngưỡng chặn lọc**. Giải thích đầy đủ:
