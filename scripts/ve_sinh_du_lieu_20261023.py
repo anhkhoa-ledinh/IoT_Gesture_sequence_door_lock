@@ -31,15 +31,31 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "vision"))
-sys.path.insert(0, str(ROOT / "scripts"))
 from common import gesture_tables, load_config, resolve_path  # noqa: E402
-from chan_doan_du_lieu import chia_burst                     # noqa: E402
 
 import numpy as np  # noqa: E402
 
 DONG_XOA_TU, DONG_XOA_DEN = 2228, 2317     # so dong trong file goc, tinh tu 1, ca hai dau
 LOP_XOA = "none"
 SO_BURST_XOA = 3
+
+
+def chia_burst(y: np.ndarray, co_burst: int) -> np.ndarray:
+    """Suy burst cho du lieu CU (truoc khi collect_data.py ghi keypoint_meta.csv).
+
+    File CSV chi ghi them (append) nen thu tu dong = thu tu ghi. Moi doan dong
+    lien tiep cung nhan duoc cat thanh tung khuc co_burst mau. Day la UOC LUONG
+    chi dung mot lan de sinh burst_id 'legacy_*'; du lieu moi co burst_id that.
+    """
+    ma = np.zeros(len(y), dtype=int)
+    k, vi_tri = 0, 0
+    for i in range(len(y)):
+        # sang lop khac, hoac du co_burst mau -> mo burst moi
+        if i > 0 and (y[i] != y[i - 1] or vi_tri == co_burst):
+            k, vi_tri = k + 1, 0
+        ma[i] = k
+        vi_tri += 1
+    return ma
 
 
 def main() -> int:

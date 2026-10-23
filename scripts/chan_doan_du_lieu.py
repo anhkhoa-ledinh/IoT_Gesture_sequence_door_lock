@@ -4,7 +4,7 @@
 ----------------------------------------------------------------------------
  Chay:
    D:\\IoT_Gesture_sequence_door_lock\\.conda\\python.exe scripts\\chan_doan_du_lieu.py
-   ... scripts\\chan_doan_du_lieu.py duong\\dan\\khac.csv     (doc file khac)
+   ... scripts\\chan_doan_du_lieu.py khac.csv --meta khac_meta.csv  (doc cap file khac)
    ... scripts\\chan_doan_du_lieu.py --tat-ca                 (liet ke het mau nghi ngo)
 
  Script CHI DOC va DO. Khong sua du lieu, khong train lai, khong can webcam.
@@ -21,6 +21,9 @@
  khung hinh. 30 mau do gan nhu la MOT tu the tay. Neu bo qua dieu nay, moi phep
  do lang gieng se bao "sach" chi vi moi mau dung canh 29 ban sao cua chinh no.
  Vi vay muc 3b/3c loai tru cac mau cung burst khi tim lang gieng.
+
+ burst_id va session_id doc tu keypoint_meta.csv (collect_data.py ghi song song
+ voi keypoint.csv, cung thu tu dong). Khong con doan burst bang cach cat khuc.
 ============================================================================
 """
 
@@ -46,21 +49,23 @@ NGUONG_LECH_SO_MAU = 0.20   # danh dau lop co so mau lech > 20% so voi trung vi
 
 
 # ============================================================================
-#  0. DOC DU LIEU VA CHIA BURST
+#  0. DOC DU LIEU VA META (burst, phien)
 # ============================================================================
 
-def doc_csv(csv_path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
-    """Doc keypoint.csv. Tra ve (X, y, so_dong, so_dong_hong).
+def doc_csv(csv_path: Path):
+    """Doc keypoint.csv. Tra ve (X, y, so_dong, so_dong_hong, stt, so_dong_khac_rong).
 
     so_dong la so thu tu dong trong file (bat dau tu 1) de nguoi dung tim lai
-    dung mau khi can loc tay.
+    dung mau khi can loc tay. stt la vi tri cua dong trong cac dong KHAC RONG
+    (bat dau tu 0) - dung vi tri nay de lay dung dong tuong ung trong meta.
     """
-    X, y, dong = [], [], []
-    hong = 0
+    X, y, dong, stt = [], [], [], []
+    hong = k = 0
     with open(csv_path, "r", newline="", encoding="utf-8") as f:
         for i, row in enumerate(csv.reader(f), start=1):
             if not row:
                 continue
+            k += 1
             if len(row) != FEATURE_DIM + 1:
                 hong += 1
                 continue
@@ -68,28 +73,19 @@ def doc_csv(csv_path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
                 y.append(int(row[0]))
                 X.append([float(v) for v in row[1:]])
                 dong.append(i)
+                stt.append(k - 1)
             except ValueError:
                 hong += 1
-    return np.asarray(X, dtype=np.float64), np.asarray(y), np.asarray(dong), hong
+    return (np.asarray(X, dtype=np.float64), np.asarray(y), np.asarray(dong), hong,
+            np.asarray(stt, dtype=int), k)
 
 
-def chia_burst(y: np.ndarray, co_burst: int) -> np.ndarray:
-    """Gan ma burst cho tung mau.
-
-    File CSV chi ghi them (append) nen thu tu dong = thu tu ghi. Moi doan dong
-    lien tiep cung nhan duoc cat thanh tung khuc co_burst mau. Day la UOC LUONG:
-    neu nguoi thu bam SPACE le hoac burst bi huy giua chung vi mat tay thi ranh
-    gioi khuc se lech, nhung moi khuc van chu yeu gom cac mau ghi sat nhau.
-    """
-    ma = np.zeros(len(y), dtype=int)
-    k, vi_tri = 0, 0
-    for i in range(len(y)):
-        # sang lop khac, hoac du co_burst mau -> mo burst moi
-        if i > 0 and (y[i] != y[i - 1] or vi_tri == co_burst):
-            k, vi_tri = k + 1, 0
-        ma[i] = k
-        vi_tri += 1
-    return ma
+def doc_meta(meta_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Doc keypoint_meta.csv. Tra ve (burst_id, session_id), moi dong du lieu mot phan tu."""
+    with open(meta_path, "r", newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return (np.array([r["burst_id"] for r in rows], dtype=object),
+            np.array([r["session_id"] for r in rows], dtype=object))
 
 
 def ma_tran_khoang_cach(A: np.ndarray, B: np.ndarray) -> np.ndarray:
@@ -109,33 +105,32 @@ def tieu_de(s: str) -> None:
 #  1. SO MAU MOI LOP
 # ============================================================================
 
-def do_so_mau(y, burst, lop_ids, ten):
+def do_so_mau(y, burst, phien, lop_ids, ten):
     tieu_de("1. SO MAU MOI LOP")
     dem = Counter(y.tolist())
     trung_vi = float(np.median([dem[c] for c in lop_ids]))
     print(f"{'id':<4}{'lop':<11}{'so mau':>8}{'/ trung vi':>12}{'so burst':>10}"
-          f"{'so doan ghi':>13}")
+          f"{'so phien':>10}")
     print("-" * 78)
     for c in lop_ids:
         m = (y == c)
         n = int(m.sum())
         ti_le = n / trung_vi if trung_vi else 0.0
-        # so doan ghi = so lan nguoi thu quay lai lop nay (cac khuc dong khong lien nhau)
-        idx = np.where(m)[0]
-        so_doan = 1 + int((np.diff(idx) > 1).sum())
+        so_phien = len(set(phien[m]))       # so session_id khac nhau co mau cua lop nay
         ghi_chu = ""
         if abs(ti_le - 1.0) > NGUONG_LECH_SO_MAU:
             ghi_chu = "  <-- lech"
         if n < 250:
             ghi_chu += "  <-- duoi 250"
         print(f"{c:<4}{ten[c]:<11}{n:>8}{ti_le:>11.2f}x{len(set(burst[m])):>10}"
-              f"{so_doan:>13}{ghi_chu}")
+              f"{so_phien:>10}{ghi_chu}")
     print("-" * 78)
     lon, nho = max(dem[c] for c in lop_ids), min(dem[c] for c in lop_ids)
-    print(f"Tong {len(y)} mau, {len(set(burst))} burst. Trung vi {trung_vi:.0f}. "
-          f"Lop nhieu nhat / it nhat = {lon}/{nho} = {lon / nho:.2f}x")
-    print("so doan ghi = 1 nghia la ca lop duoc thu trong MOT lan ngoi lien mach")
-    print("  (cung anh sang, cung tu the ngoi) - model co the hoc ca boi canh do.")
+    print(f"Tong {len(y)} mau, {len(set(burst))} burst, {len(set(phien))} phien. "
+          f"Trung vi {trung_vi:.0f}. Lop nhieu nhat / it nhat = {lon}/{nho} = {lon / nho:.2f}x")
+    print("so phien = so session_id khac nhau (keypoint_meta.csv). 1 phien nghia la ca lop")
+    print("  duoc thu trong MOT lan ngoi (cung anh sang, cung cho ngoi) - model co the hoc")
+    print("  ca boi canh do. Du lieu cu legacy_<lop> la 1 phien moi lop.")
 
 
 # ============================================================================
@@ -166,7 +161,7 @@ def do_phan_tan(X, y, lop_ids, ten, tam):
 #  3. MAU NGHI NGO SAI NHAN
 # ============================================================================
 
-def do_nghi_sai_nhan(X, y, dong, burst, lop_ids, ten, tam, D_all, tat_ca):
+def do_nghi_sai_nhan(X, y, dong, burst, ten_burst, lop_ids, ten, tam, D_all, tat_ca):
     tieu_de("3. MAU NGHI NGO SAI NHAN  (gan tam lop khac hon tam lop cua minh)")
     vi_tri = {c: k for k, c in enumerate(lop_ids)}
     k_cua = np.array([vi_tri[c] for c in y])
@@ -254,7 +249,8 @@ def do_nghi_sai_nhan(X, y, dong, burst, lop_ids, ten, tam, D_all, tat_ca):
         if top != c:
             co = True
             tong = len(m) * K_LANG_GIENG
-            print(f"  dong {dong[m[0]]:>5}-{dong[m[-1]]:<5} ({len(m):>2} mau) nhan {ten[c]:<9}"
+            print(f"  {ten_burst[m[0]]:<24} dong {dong[m[0]]:>5}-{dong[m[-1]]:<5}"
+                  f" ({len(m):>2} mau) nhan {ten[c]:<9}"
                   f"-> lang gieng: "
                   + ", ".join(f"{ten[a]} {s / tong:.0%}" for a, s in dem.most_common(3)))
     if not co:
@@ -348,6 +344,7 @@ def do_trung_lap(X, y, burst, lop_ids, ten, tam, D_all):
 def main() -> int:
     ap = argparse.ArgumentParser(description="Chan doan chat luong keypoint.csv (chi doc).")
     ap.add_argument("csv", nargs="?", help="duong dan CSV (mac dinh: model.keypoint_csv)")
+    ap.add_argument("--meta", help="keypoint_meta.csv tuong ung (mac dinh: model.keypoint_meta_csv)")
     ap.add_argument("--tat-ca", action="store_true", help="liet ke het mau nghi ngo")
     args = ap.parse_args()
 
@@ -355,34 +352,49 @@ def main() -> int:
     ten, _ = gesture_tables(cfg)
     lop_ids = sorted(ten)
     csv_path = Path(args.csv) if args.csv else resolve_path(cfg["model"]["keypoint_csv"])
-    if not csv_path.exists():
-        print(f"LOI: khong tim thay {csv_path}")
+    if args.meta:
+        meta_path = Path(args.meta)
+    elif args.csv:
+        print("LOI: doc file CSV khac thi phai chi kem --meta (file burst_id/session_id tuong ung).")
         return 1
+    else:
+        meta_path = resolve_path(cfg["model"]["keypoint_meta_csv"])
+    for p in (csv_path, meta_path):
+        if not p.exists():
+            print(f"LOI: khong tim thay {p}")
+            return 1
 
-    X, y, dong, hong = doc_csv(csv_path)
+    X, y, dong, hong, stt, so_dong = doc_csv(csv_path)
+    burst_ten, phien = doc_meta(meta_path)
     print(f"File: {csv_path}")
+    print(f"Meta: {meta_path}")
     print(f"Doc duoc {len(y)} mau, {FEATURE_DIM} chieu. Dong hong bo qua: {hong}")
+    if len(burst_ten) != so_dong:
+        print(f"LOI: {csv_path.name} co {so_dong} dong nhung {meta_path.name} co "
+              f"{len(burst_ten)} dong du lieu - hai file phai khop tung dong.")
+        return 1
+    burst_ten, phien = burst_ten[stt], phien[stt]      # bo dong hong o ca hai phia
 
     # Chi giu cac lop co trong config de moi phep do dung cung mot bang lop.
     la = sorted(set(y.tolist()) - set(lop_ids))
     if la:
         print(f"CANH BAO: class_id khong co trong config.json, bo qua: {la}")
     giu = np.isin(y, lop_ids)
-    X, y, dong = X[giu], y[giu], dong[giu]
+    X, y, dong, burst_ten, phien = X[giu], y[giu], dong[giu], burst_ten[giu], phien[giu]
     lop_ids = [c for c in lop_ids if (y == c).any()]
     tam = np.stack([X[y == c].mean(axis=0) for c in lop_ids])
 
-    co_burst = cfg["collect"]["burst_samples"]
-    burst = chia_burst(y, co_burst)
-    print(f"Chia burst: moi doan dong lien tiep cung nhan cat thanh khuc {co_burst} mau "
-          "(collect.burst_samples).")
+    # burst_id dang chuoi -> ma so nguyen de so sanh nhanh trong ma tran khoang cach.
+    _, burst = np.unique(burst_ten, return_inverse=True)
+    print(f"Burst va phien doc tu {meta_path.name}: {len(set(burst))} burst, "
+          f"{len(set(phien))} phien.")
 
     D_all = ma_tran_khoang_cach(X, X)
     np.fill_diagonal(D_all, np.inf)
 
-    do_so_mau(y, burst, lop_ids, ten)
+    do_so_mau(y, burst, phien, lop_ids, ten)
     do_phan_tan(X, y, lop_ids, ten, tam)
-    do_nghi_sai_nhan(X, y, dong, burst, lop_ids, ten, tam, D_all, args.tat_ca)
+    do_nghi_sai_nhan(X, y, dong, burst, burst_ten, lop_ids, ten, tam, D_all, args.tat_ca)
     do_khoang_cach_tam(lop_ids, ten, tam)
     do_trung_lap(X, y, burst, lop_ids, ten, tam, D_all)
     print()

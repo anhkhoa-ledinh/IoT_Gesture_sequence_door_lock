@@ -113,6 +113,64 @@ def doc_ma_tu_context(ctx) -> str | None:
     return None
 
 
+def xac_dinh_kho_context(settings_js: str | None) -> str | None:
+    """Doc settings.js cua Node-RED, tra ve module cua kho context MAC DINH.
+
+    flows.json goi flow.get/set("ma_hop_le") KHONG kem ten kho, nen ma nam o kho
+    mac dinh. Tra ve "memory" khi contextStorage khong bat (mac dinh cua
+    Node-RED), ten module (vd "localfilesystem") neu bat, None neu khong doc duoc.
+    """
+    if settings_js is None:
+        return None
+    # Bo chu thich de khong nham khoi 'contextStorage' bi comment trong file mau.
+    s = re.sub(r"/\*.*?\*/", "", settings_js, flags=re.S)
+    s = re.sub(r"^\s*//.*$", "", s, flags=re.M)
+    m = re.search(r"contextStorage\s*:\s*\{", s)
+    if not m:
+        return "memory"
+    # Lay nguyen khoi { ... } bang dem ngoac.
+    i, sau = m.end(), 1
+    while i < len(s) and sau:
+        sau += {"{": 1, "}": -1}.get(s[i], 0)
+        i += 1
+    khoi = s[m.end():i - 1]
+    kho = dict(re.findall(r"([\w$]+)\s*:\s*\{[^{}]*?module\s*:\s*[\"']([\w-]+)[\"']", khoi))
+    bi_danh = re.search(r"default\s*:\s*[\"']([\w$]+)[\"']", khoi)
+    if "default" in kho:
+        return kho["default"]
+    if bi_danh and bi_danh.group(1) in kho:
+        return kho[bi_danh.group(1)]
+    return next(iter(kho.values()), None)      # Node-RED lay kho dau tien lam mac dinh
+
+
+def huong_dan_dat_lai_context(kho: str | None, user_dir: Path | None, tab: str,
+                              ma_flow: str) -> list[str]:
+    """Cach dat lai 'ma_hop_le' cu the theo noi Node-RED luu context."""
+    settings = user_dir / "settings.js" if user_dir else None
+    if kho == "memory":
+        return [f"{settings}: contextStorage khong bat -> context nam trong BO NHO.",
+                "Cach dat lai: tat Node-RED (Ctrl+C o cua so dang chay node-red) roi chay",
+                "lai lenh: node-red. Context bo nho mat khi tat, lan kiem ma dau tien sau",
+                f"do se lay MA_MAC_DINH = {ma_flow} tu flow. Chay lai script nay de xac nhan."]
+    if kho == "localfilesystem":
+        thu_muc = user_dir / "context" / tab if user_dir else Path("<userDir>/context") / tab
+        co = " (dang ton tai)" if thu_muc.exists() else " (khong thay - tim trong <userDir>\\context\\)"
+        return [f"{settings}: contextStorage dung localfilesystem -> context luu ra FILE,",
+                "khoi dong lai Node-RED KHONG xoa duoc ma cu.",
+                "Cach dat lai: tat Node-RED, xoa thu muc context cua flow nay:",
+                f"  {thu_muc}{co}",
+                f"roi chay lai node-red. Lan kiem ma dau tien se lay MA_MAC_DINH = {ma_flow}."]
+    if kho:
+        return [f"{settings}: kho context mac dinh la module '{kho}' - script khong biet",
+                "cach dat lai cho module nay. Xoa khoa ma_hop_le cua flow theo tai lieu module do."]
+    return [f"Khong doc duoc settings.js{f' tai {settings}' if settings else ''} nen khong biet",
+            "context luu o dau. Mo settings.js, tim 'contextStorage':",
+            "  - dang bi comment (//) -> luu bo nho: tat Node-RED roi chay lai node-red.",
+            f"  - co module 'localfilesystem' -> luu file: tat Node-RED, xoa <userDir>\\context\\{tab}\\,",
+            "    roi chay lai node-red.",
+            "Chi ro userDir bang --node-red-dir neu khong phai %USERPROFILE%\\.node-red."]
+
+
 # ============================================================================
 #  2. CAC MUC KIEM
 # ============================================================================
@@ -246,8 +304,12 @@ def _get_json(url: str):
         return json.loads(r.read().decode("utf-8"))
 
 
-def kiem_node_red(cfg: dict, base: str) -> list[KetQua]:
-    """Hoi Node-RED dang chay: flow nao dang deploy, context dang giu ma gi."""
+def kiem_node_red(cfg: dict, base: str, user_dir: Path | None = None) -> list[KetQua]:
+    """Hoi Node-RED dang chay: flow nao dang deploy, context dang giu ma gi.
+
+    user_dir = thu muc userDir cua Node-RED (chua settings.js), dung de chi dung
+    cach dat lai context. None thi in ca hai cach.
+    """
     base = base.rstrip("/")
     ma_dung = cfg["secret"]["default_code"].upper()
     ten = f"flow DANG CHAY trong Node-RED ({base})"
@@ -259,7 +321,11 @@ def kiem_node_red(cfg: dict, base: str) -> list[KetQua]:
                                        "tu kiem trong editor: mo node 'Kiem ma', xem MA_MAC_DINH"])]
         return [KetQua(FAIL, ten, [f"HTTP {e.code}"])]
     except (urllib.error.URLError, OSError) as e:
-        return [KetQua(FAIL, ten, [f"khong ket noi duoc: {e}", "Node-RED chua chay?"])]
+        return [KetQua(FAIL, ten, [
+            "Node-RED chua chay.",
+            f"(khong ket noi duoc {base}: {e})",
+            "Cach sua: mo mot cua so lenh, chay: node-red",
+            "doi dong 'Server now running at http://127.0.0.1:1880/' roi chay lai script nay."])]
     if isinstance(flows, dict):                     # Node-RED-API-Version v2
         flows = flows.get("flows", [])
 
@@ -272,7 +338,10 @@ def kiem_node_red(cfg: dict, base: str) -> list[KetQua]:
     if len(chay) > 1:
         return [KetQua(FAIL, ten, ct + [
             f"CO {len(chay)} NODE KIEM MA CHAY CUNG LUC: moi sequence se nhan {len(chay)} lenh cmd.",
-            "Xoa tab cu: nhap phai tab -> Delete -> Deploy, roi chay lai script nay."])]
+            "Cach sua: Xoa tab flow cu, Deploy, roi Import lai.",
+            "  1. Trong editor, nhap phai TUNG tab o tren -> Delete. Bam Deploy.",
+            "  2. Menu (3 gach) -> Import -> chon middleware/flows.json -> Import. Bam Deploy.",
+            "  3. Chay lai script nay: phai con dung 1 node kiem ma."])]
     n = chay[0]
     kq = []
     if n["ma"] != ma_dung:
@@ -292,11 +361,17 @@ def kiem_node_red(cfg: dict, base: str) -> list[KetQua]:
         kq.append(KetQua(PASS, ten_ctx, [
             "context chua co ma - lan kiem ma dau tien se lay MA_MAC_DINH = " + n["ma"]]))
     elif ma_ctx != ma_dung:
+        settings = user_dir / "settings.js" if user_dir else None
+        try:
+            noi_dung = settings.read_text(encoding="utf-8") if settings else None
+        except OSError:
+            noi_dung = None
+        kho = xac_dinh_kho_context(noi_dung)
         kq.append(KetQua(FAIL, ten_ctx, [
-            f"Node-RED dang giu ma {ma_ctx}, khac secret.default_code = {ma_dung}",
-            "Kiem ma chi doc MA_MAC_DINH khi context trong, nen import flow moi de len",
-            "KHONG doi duoc ma nay. Xoa tab -> Deploy -> Import flows.json -> Deploy,",
-            "hoac khoi dong lai Node-RED."]))
+            f"Node-RED dang giu ma {ma_ctx}, khac secret.default_code = {ma_dung}.",
+            "Kiem ma chi doc MA_MAC_DINH khi context con trong, nen import flow moi de",
+            "len KHONG doi duoc ma nay - phai xoa context.",
+        ] + huong_dan_dat_lai_context(kho, user_dir, n["tab"], n["ma"])))
     else:
         kq.append(KetQua(PASS, ten_ctx, [f"ma_hop_le = {ma_ctx}"]))
     return kq
@@ -318,6 +393,8 @@ def in_ket_qua(kq: KetQua, co_mau: bool) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Tien kiem truoc phien chay that.")
     ap.add_argument("--node-red", default="http://localhost:1880", help="dia chi Node-RED")
+    ap.add_argument("--node-red-dir", default=str(Path.home() / ".node-red"),
+                    help="userDir cua Node-RED (chua settings.js)")
     ap.add_argument("--khong-mau", action="store_true", help="tat mau ANSI")
     args = ap.parse_args()
     co_mau = not args.khong_mau
@@ -340,7 +417,7 @@ def main() -> int:
     them(kiem_task(cfg))
     them(kiem_mqtt(cfg))
     them(kiem_flows_file(cfg))
-    them(kiem_node_red(cfg, args.node_red))
+    them(kiem_node_red(cfg, args.node_red, Path(args.node_red_dir)))
 
     hong = [k for k in tat_ca if k.trang_thai == FAIL]
     canh_bao = [k for k in tat_ca if k.trang_thai == WARN]

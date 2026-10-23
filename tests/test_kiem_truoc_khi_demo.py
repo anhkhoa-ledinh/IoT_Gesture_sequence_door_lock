@@ -130,6 +130,88 @@ def test_flow_moi_nhung_context_con_giu_ma_cu(node_red):
     assert "E17C4D" in " ".join(kq[1].chi_tiet)
 
 
+SETTINGS_MAU = """module.exports = {
+    /** contextStorage: ...  (chu thich khoi) */
+    //contextStorage: {
+    //    default: {
+    //        module:"localfilesystem"
+    //    },
+    //},
+    flowFile: 'flows.json',
+}"""
+SETTINGS_FILE = """module.exports = {
+    contextStorage: {
+        default: { module: "localfilesystem" },
+    },
+}"""
+SETTINGS_HAI_KHO = """module.exports = {
+    contextStorage: {
+        default: { module: "memory" },
+        file: { module: "localfilesystem" }
+    },
+}"""
+SETTINGS_BI_DANH = """module.exports = {
+    contextStorage: {
+        default: "file",
+        mem: { module: "memory" },
+        file: { module: "localfilesystem" }
+    },
+}"""
+
+
+@pytest.mark.parametrize("noi_dung, mong_doi", [
+    (SETTINGS_MAU, "memory"),             # file mau: contextStorage bi comment -> bo nho
+    (SETTINGS_FILE, "localfilesystem"),
+    (SETTINGS_HAI_KHO, "memory"),         # flows.json khong ghi ten kho -> kho default
+    (SETTINGS_BI_DANH, "localfilesystem"),
+    (None, None),
+])
+def test_xac_dinh_kho_context(noi_dung, mong_doi):
+    assert k.xac_dinh_kho_context(noi_dung) == mong_doi
+
+
+def _user_dir(tmp_path, noi_dung):
+    (tmp_path / "settings.js").write_text(noi_dung, encoding="utf-8")
+    return tmp_path
+
+
+CTX_MA_CU = {"memory": {"ma_hop_le": {"msg": "E17C4D"}}}
+
+
+def test_context_lech_kho_bo_nho_chi_khoi_dong_lai(node_red, tmp_path):
+    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    kq = k.kiem_node_red(CFG, url, _user_dir(tmp_path, SETTINGS_MAU))
+    s = " ".join(kq[1].chi_tiet)
+    assert kq[1].trang_thai == k.FAIL
+    assert "BO NHO" in s and "node-red" in s and "FILE" not in s
+
+
+def test_context_lech_kho_file_chi_thu_muc_can_xoa(node_red, tmp_path):
+    ud = _user_dir(tmp_path, SETTINGS_FILE)
+    (ud / "context" / "tab_gate").mkdir(parents=True)
+    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    s = " ".join(k.kiem_node_red(CFG, url, ud)[1].chi_tiet)
+    assert "FILE" in s and "KHONG xoa duoc" in s
+    assert str(ud / "context" / "tab_gate") in s and "dang ton tai" in s
+
+
+def test_context_lech_khong_doc_duoc_settings_in_ca_hai_cach(node_red, tmp_path):
+    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    s = " ".join(k.kiem_node_red(CFG, url, tmp_path / "khong_co")[1].chi_tiet)
+    assert "bo nho" in s and "luu file" in s
+
+
+def test_thong_bao_sua_khi_node_red_chua_chay():
+    s = " ".join(k.kiem_node_red(CFG, "http://127.0.0.1:9")[0].chi_tiet)
+    assert "Node-RED chua chay" in s and "node-red" in s
+
+
+def test_thong_bao_sua_khi_co_hai_node_kiem_ma(node_red):
+    nodes = flow_voi_ma("7CE13A") + flow_voi_ma("7CE13A", tab="tab_cu", node_id="cu")
+    s = " ".join(k.kiem_node_red(CFG, node_red(nodes))[0].chi_tiet)
+    assert "Xoa tab flow cu, Deploy, roi Import lai" in s
+
+
 def test_flow_cu_chua_import_lai(node_red):
     kq = k.kiem_node_red(CFG, node_red(flow_voi_ma("E17C4D")))
     assert kq[0].trang_thai == k.FAIL

@@ -24,6 +24,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -106,6 +107,32 @@ def in_phan_bo(y: np.ndarray, id_to_label: dict[int, str], tieu_de: str) -> None
     print(f"{'':<16}{len(y):>8}  tong cong")
 
 
+def doc_eval_metrics(metrics_path: Path, local_csv: Path) -> tuple[dict | None, str, str]:
+    """Doc so lieu 'validation tu thu' do train_classifier.ipynb luu ra.
+
+    Script nay KHONG tu chia lai du lieu nua: model trien khai duoc train tren
+    TOAN BO keypoint.csv, nen bat ky phan nao cua file do cung la du lieu model
+    da hoc. So lieu trung thuc duy nhat la cua kiem dinh cheo 5 fold chia theo
+    burst trong notebook.
+
+    Tra ve (metrics, ly_do_neu_khong_co, canh_bao).
+    """
+    if not metrics_path.exists():
+        return None, "chua chay notebook sau Phase 2.6", ""
+    try:
+        m = json.loads(metrics_path.read_text(encoding="utf-8"))
+        float(m["tong_the"]["oof"])
+        int(m["so_mau"])
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        return None, f"{metrics_path.name} hong: {e}", ""
+    canh_bao = ""
+    if local_csv.exists() and m.get("keypoint_csv_md5"):
+        if hashlib.md5(local_csv.read_bytes()).hexdigest() != m["keypoint_csv_md5"]:
+            canh_bao = (f"{local_csv.name} da doi sau lan danh gia ({m.get('thoi_diem')}) "
+                        "- so lieu nay da cu, chay lai notebook")
+    return m, "", canh_bao
+
+
 def ve_ma_tran_nham_lan(y_true, y_pred, class_names, out_png: Path, tieu_de: str):
     """Ve va luu ma tran nham lan. Tra ve ma tran de dung tiep."""
     import matplotlib
@@ -135,7 +162,6 @@ def ve_ma_tran_nham_lan(y_true, y_pred, class_names, out_png: Path, tieu_de: str
 
 def main() -> int:
     from sklearn.metrics import accuracy_score, classification_report
-    from sklearn.model_selection import train_test_split
 
     cfg = load_config()
     id_to_label, _ = gesture_tables(cfg)
@@ -143,6 +169,7 @@ def main() -> int:
 
     tflite_path = resolve_path(cfg["model"]["classifier_tflite"])
     local_csv = resolve_path(cfg["model"]["keypoint_csv"])
+    metrics_path = resolve_path(cfg["model"]["eval_metrics_json"])
     hagrid_csv = local_csv.parent / "keypoint_hagrid.csv"
     report_json = local_csv.parent / "extract_report.json"
     out_png = (Path(__file__).resolve().parent.parent
@@ -204,20 +231,9 @@ def main() -> int:
                              "Ma tran nham lan — HaGRID (tap ngoai)")
     print(f"Da luu ma tran nham lan: {out_png}")
 
-    # ------------------------------------- do lai tren validation tu thu de so
-    acc_val = None
-    if local_csv.exists():
-        X_l, y_l = load_keypoint_csv(local_csv)
-        # Dung DUNG cach chia cua train_classifier.ipynb (80/20, stratified,
-        # random_state=42) de lay lai chinh tap validation da dung luc train.
-        try:
-            _, X_val, _, y_val = train_test_split(
-                X_l, y_l, test_size=0.20, stratify=y_l, random_state=42)
-            acc_val = float(accuracy_score(y_val, clf.predict(X_val)))
-        except ValueError as e:
-            print(f"\n(khong chia lai duoc tap validation: {e})")
-    else:
-        print(f"\n(khong thay {local_csv.name} — khong so sanh duoc voi tap tu thu)")
+    # ---------------------- phia validation tu thu: DOC tu notebook, khong chia lai
+    metrics, ly_do, canh_bao = doc_eval_metrics(metrics_path, local_csv)
+    acc_val = float(metrics["tong_the"]["oof"]) if metrics else None
 
     # ------------------------------------------------------ HAI CON SO CANH NHAU
     print()
@@ -226,11 +242,18 @@ def main() -> int:
     print("=" * 74)
     print(f"{'Tap du lieu':<40}{'So mau':>9}{'Do chinh xac':>16}")
     print("-" * 74)
-    if acc_val is not None:
-        print(f"{'Validation tu thu (webcam nguoi dung)':<40}{len(y_val):>9}{acc_val:>15.1%}")
+    if metrics:
+        print(f"{'Validation tu thu (webcam nguoi dung)':<40}{metrics['so_mau']:>9}{acc_val:>15.1%}")
+        tt = metrics["tong_the"]
+        print(f"   {metrics['phuong_phap']}, {metrics['n_splits']} fold nhom theo "
+              f"{metrics['nhom']}, out-of-fold; trung binh fold {tt['mean']:.1%} "
+              f"± {tt['std']:.1%}")
+        print(f"   (doc tu {metrics_path.name}, luc {metrics.get('thoi_diem')})")
+        if canh_bao:
+            print(f"   CANH BAO: {canh_bao}")
     else:
-        print(f"{'Validation tu thu (webcam nguoi dung)':<40}{'N/A':>9}{'N/A':>16}"
-              f"   <- thieu keypoint.csv")
+        print(f"{'Validation tu thu (webcam nguoi dung)':<40}{'N/A':>9}{'N/A':>16}")
+        print(f"   ly do: {ly_do} ({metrics_path.name} khong dung duoc)")
     print(f"{'HaGRID (tap ngoai, nguoi khac)':<40}{len(y_h):>9}{acc_hagrid:>15.1%}")
     print("-" * 74)
     if acc_val is not None:
