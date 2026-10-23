@@ -1,6 +1,6 @@
 {
   "_note": "Nguon duy nhat cho moi tham so cua he thong. KHONG hardcode lai trong code Python.",
-  "_todo_mssv": "TODO: doi 'huit/ak_majespecter/gate/' thanh 'huit/<MSSV that>/gate/' khi co MSSV. Chi can sua o mqtt.topic_prefix.",
+  "_ghi_chu_prefix": "Prefix 'huit/ak_majespecter/gate/' la LUA CHON CO CHU DICH, khong doi sang MSSV: tren broker cong cong, mot chuoi ngau nhien kho doan hon MSSV (MSSV co dinh dang co dinh, de tra cuu). Prefix chi de tranh trung topic voi nguoi khac, KHONG phai bien phap bao mat (xem docs/BAO_CAO_KY_THUAT.md muc 7.2). Doi prefix bat buoc dan lai firmware len Wokwi VA import lai flow Node-RED.",
 
   "mqtt": {
     "broker": "broker.hivemq.com",
