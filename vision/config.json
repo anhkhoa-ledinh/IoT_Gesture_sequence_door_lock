@@ -61,6 +61,8 @@
     "hand_landmarker_task": "model/hand_landmarker.task",
     "hand_landmarker_url": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
     "keypoint_csv": "model/keypoint.csv",
+    "keypoint_meta_csv": "model/keypoint_meta.csv",
+    "_meta_note": "keypoint_meta.csv: dong tieu de session_id,burst_id roi MOT dong cho moi dong cua keypoint.csv, cung thu tu. keypoint.csv giu nguyen 43 cot. Notebook chia train/val theo burst_id.",
     "classifier_keras": "model/gesture_classifier.keras",
     "classifier_tflite": "model/gesture_classifier.tflite",
     "num_hands": 1
@@ -68,7 +70,8 @@
 
   "collect": {
     "burst_samples": 30,
-    "burst_frame_step": 2
+    "burst_frame_step": 2,
+    "session_burst_target": 3
   },
 
   "_dong_bo_tay": [

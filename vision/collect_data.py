@@ -15,7 +15,14 @@
    cot 1  = class_id
    cot 2..43 = vector dac trung 42 chieu tu preprocess_landmarks()
 
+ Song song, moi mau ghi them MOT dong vao vision/model/keypoint_meta.csv:
+   session_id = thoi diem bat dau lan chay nay, vd s20261024_153012
+   burst_id   = <session_id>_bNNN, moi lan bam R hoac SPACE la mot burst moi
+ Dong thu i cua hai file luon ung voi nhau. Notebook dung burst_id de chia
+ train/val sao cho 30 mau cua cung mot lan bam R khong nam o ca hai phia.
+
  LUU Y: file KHONG BAO GIO bi ghi de. Chay lai nhieu lan de bo sung du lieu.
+ Neu hai file khong khop so dong, script tu choi chay de khong lech them.
 ============================================================================
 """
 
@@ -24,7 +31,8 @@ from __future__ import annotations
 import csv
 import sys
 import time
-from collections import Counter
+from collections import Counter, defaultdict
+from datetime import datetime
 from pathlib import Path
 
 import cv2
@@ -65,22 +73,94 @@ def count_existing_samples(csv_path: Path) -> Counter:
     return counts
 
 
-def append_sample(csv_path: Path, class_id: int, features: np.ndarray) -> None:
-    """Ghi them 1 mau vao cuoi file. Mo che do 'a' nen khong bao gio ghi de."""
+META_HEADER = ["session_id", "burst_id"]
+
+
+def count_data_rows(path: Path, has_header: bool) -> int:
+    """So dong du lieu trong file CSV (bo dong trong, bo dong tieu de neu co)."""
+    if not path.exists():
+        return 0
+    with open(path, "r", newline="", encoding="utf-8") as f:
+        n = sum(1 for row in csv.reader(f) if row)
+    return max(0, n - 1) if has_header else n
+
+
+def check_meta_aligned(csv_path: Path, meta_path: Path) -> int:
+    """Bao loi neu keypoint.csv va keypoint_meta.csv khong khop tung dong.
+
+    Lech mot dong la toan bo burst_id phia sau gan nham mau, va notebook se chia
+    train/val sai ma khong co dau hieu gi. Vi vay dung han thay vi ghi tiep.
+    Tra ve so dong du lieu hien co.
+    """
+    n_data = count_data_rows(csv_path, has_header=False)
+    n_meta = count_data_rows(meta_path, has_header=True)
+    if n_data != n_meta:
+        raise RuntimeError(
+            f"{csv_path.name} co {n_data} dong nhung {meta_path.name} co {n_meta} dong.\n"
+            "Hai file phai khop tung dong. Khong thu tiep de tranh lech them —\n"
+            "kiem tra lai hai file (ban sao luu: vision/model/keypoint_backup_*.csv)."
+        )
+    return n_data
+
+
+def append_sample(csv_path: Path, meta_path: Path, class_id: int,
+                  features: np.ndarray, session_id: str, burst_id: str) -> None:
+    """Ghi them 1 mau vao cuoi keypoint.csv VA 1 dong vao keypoint_meta.csv.
+
+    Hai file luon tang cung nhau dung mot dong. Mo che do 'a' nen khong bao gio
+    ghi de. keypoint.csv giu nguyen 43 cot nhu cu.
+    """
     if features.shape != (FEATURE_DIM,):
         raise ValueError(f"Vector dac trung phai co {FEATURE_DIM} chieu, "
                          f"nhan duoc {features.shape}")
     csv_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_moi = not meta_path.exists() or meta_path.stat().st_size == 0
     with open(csv_path, "a", newline="", encoding="utf-8") as f:
         csv.writer(f).writerow([class_id] + [f"{v:.6f}" for v in features])
+    with open(meta_path, "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if meta_moi:
+            w.writerow(META_HEADER)
+        w.writerow([session_id, burst_id])
+
+
+class CollectSession:
+    """Mot lan chay collect_data.py: session_id va cac burst da ghi trong phien.
+
+    Thuan logic, khong dung camera — test duoc bang du lieu gia.
+    """
+
+    def __init__(self, started_at: datetime | None = None) -> None:
+        started_at = started_at or datetime.now()
+        self.session_id = started_at.strftime("s%Y%m%d_%H%M%S")
+        self._next = 0
+        self._bursts_by_class: dict[int, set[str]] = defaultdict(set)
+
+    def new_burst(self) -> str:
+        """Cap mot burst_id moi. Goi moi lan bam R hoac SPACE."""
+        burst_id = f"{self.session_id}_b{self._next:03d}"
+        self._next += 1
+        return burst_id
+
+    def mark_written(self, class_id: int, burst_id: str) -> None:
+        """Ghi nhan burst da co it nhat 1 mau. Burst bam R ma mat tay ngay thi khong tinh."""
+        self._bursts_by_class[class_id].add(burst_id)
+
+    def burst_count(self, class_id: int) -> int:
+        return len(self._bursts_by_class[class_id])
 
 
 # ============================================================================
 #  2. VE GIAO DIEN
 # ============================================================================
 
-def draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand):
-    """Ve bang thong tin len khung hinh: lop dang chon, so mau moi lop, phim tat."""
+def draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand,
+             session, burst_target):
+    """Ve bang thong tin len khung hinh: lop dang chon, so mau moi lop, phim tat.
+
+    Cot ben trai hien them 'phien N/muc tieu': so burst cua lop do da ghi TRONG
+    LAN CHAY NAY. Lop nao du muc tieu thi chuyen xanh — nhin la biet lop nao con thieu.
+    """
     h, w = frame.shape[:2]
 
     # Nen mo phia tren cho de doc chu.
@@ -107,11 +187,18 @@ def draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand):
         cv2.putText(frame, f"DANG GHI... con {burst_left}", (w - 250, 50),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 165, 255), 2)
 
-    # Cot ben trai: so mau tung lop.
+    # Cot ben trai: tong so mau tung lop + so burst trong phien nay.
     y = 90
     for cid in sorted(id_to_label):
-        color = (0, 255, 255) if cid == current_id else (200, 200, 200)
-        cv2.putText(frame, f"{cid} {id_to_label[cid]:<9} {counts[cid]:>4}",
+        n_burst = session.burst_count(cid)
+        if cid == current_id:
+            color = (0, 255, 255)                     # vang: lop dang chon
+        elif n_burst >= burst_target:
+            color = (0, 200, 0)                       # xanh: du muc tieu phien nay
+        else:
+            color = (200, 200, 200)
+        cv2.putText(frame, f"{cid} {id_to_label[cid]:<9} {counts[cid]:>4}"
+                           f"  phien {n_burst}/{burst_target}",
                     (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.55, color, 1)
         y += 22
 
@@ -119,24 +206,28 @@ def draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand):
                 (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
 
-def print_summary(id_to_label, counts, csv_path):
-    """In bang dem so mau moi lop khi thoat."""
+def print_summary(id_to_label, counts, csv_path, session, burst_target):
+    """In bang dem so mau moi lop va so burst trong phien khi thoat."""
     print()
-    print("=" * 46)
+    print("=" * 52)
     print("TONG KET SO MAU TRONG", csv_path)
-    print("=" * 46)
-    print(f"{'id':<4}{'lop':<12}{'so mau':>8}")
-    print("-" * 46)
+    print("Phien:", session.session_id)
+    print("=" * 52)
+    print(f"{'id':<4}{'lop':<12}{'so mau':>8}{'burst phien nay':>18}")
+    print("-" * 52)
     total = 0
     for cid in sorted(id_to_label):
         n = counts[cid]
         total += n
         canh_bao = "  <-- con it" if n < 250 else ""
-        print(f"{cid:<4}{id_to_label[cid]:<12}{n:>8}{canh_bao}")
-    print("-" * 46)
+        n_burst = session.burst_count(cid)
+        thieu = "" if n_burst >= burst_target else " (thieu)"
+        print(f"{cid:<4}{id_to_label[cid]:<12}{n:>8}{n_burst:>11}/{burst_target}{thieu}{canh_bao}")
+    print("-" * 52)
     print(f"{'':<16}{total:>8}  tong cong")
-    print("=" * 46)
+    print("=" * 52)
     print("Muc tieu: 250-300 mau moi lop, KE CA lop 'none'.")
+    print(f"Moi phien: moi lop it nhat {burst_target} lan bam R (collect.session_burst_target).")
 
 
 # ============================================================================
@@ -147,10 +238,24 @@ def main() -> int:
     cfg = load_config()
     id_to_label, _ = gesture_tables(cfg)
     csv_path = resolve_path(cfg["model"]["keypoint_csv"])
+    meta_path = resolve_path(cfg["model"]["keypoint_meta_csv"])
+
+    # Kiem tra hai file khop tung dong TRUOC khi mo webcam.
+    try:
+        check_meta_aligned(csv_path, meta_path)
+    except RuntimeError as e:
+        print("LOI:", e)
+        return 1
     counts = count_existing_samples(csv_path)
 
     burst_total = cfg["collect"]["burst_samples"]      # 30
     burst_step = cfg["collect"]["burst_frame_step"]    # ghi cach nhau 2 khung
+    burst_target = cfg["collect"]["session_burst_target"]
+
+    # Moi lan chay la mot phien moi -> session_id moi.
+    session = CollectSession()
+    burst_r_id = None                                  # burst_id cua lan bam R dang ghi
+    print(f"Phien thu: {session.session_id}  (ghi meta vao {meta_path.name})")
 
     model_path = ensure_hand_landmarker(cfg)
 
@@ -213,7 +318,9 @@ def main() -> int:
             # --- Ghi lien tuc (phim R): cach nhau burst_step khung ---
             if burst_left > 0:
                 if features is not None and frame_idx % burst_step == 0:
-                    append_sample(csv_path, current_id, features)
+                    append_sample(csv_path, meta_path, current_id, features,
+                                  session.session_id, burst_r_id)
+                    session.mark_written(current_id, burst_r_id)
                     counts[current_id] += 1
                     burst_left -= 1
                 elif features is None:
@@ -221,7 +328,8 @@ def main() -> int:
                     print("Mat tay, huy che do ghi lien tuc.")
                     burst_left = 0
 
-            draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand)
+            draw_hud(frame, id_to_label, counts, current_id, burst_left, has_hand,
+                     session, burst_target)
             cv2.imshow("Thu du lieu cu chi - Q de thoat", frame)
             frame_idx += 1
 
@@ -239,18 +347,24 @@ def main() -> int:
                 if features is None:
                     print("Khong thay tay, khong ghi.")
                 else:
-                    append_sample(csv_path, current_id, features)
+                    # Moi lan bam SPACE la mot burst rieng (1 mau). Khong dung
+                    # burst_r_id de mau le khong bi gop vao burst R dang ghi do.
+                    burst_space_id = session.new_burst()
+                    append_sample(csv_path, meta_path, current_id, features,
+                                  session.session_id, burst_space_id)
+                    session.mark_written(current_id, burst_space_id)
                     counts[current_id] += 1
                     print(f"ghi 1 mau lop {current_id} "
                           f"({id_to_label[current_id]}) -> tong {counts[current_id]}")
             elif key in (ord("r"), ord("R")):             # ghi lien tuc
                 burst_left = burst_total
+                burst_r_id = session.new_burst()          # moi lan bam R = burst moi
                 print(f"ghi lien tuc {burst_total} mau cho lop {current_id} "
-                      f"({id_to_label[current_id]})")
+                      f"({id_to_label[current_id]}) -> {burst_r_id}")
 
     cap.release()
     cv2.destroyAllWindows()
-    print_summary(id_to_label, counts, csv_path)
+    print_summary(id_to_label, counts, csv_path, session, burst_target)
     return 0
 
 
