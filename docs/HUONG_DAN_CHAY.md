@@ -224,7 +224,7 @@ cd D:\IoT_Gesture_sequence_door_lock
 
 | Vùng trên màn hình | Ý nghĩa |
 |---|---|
-| Góc trên trái, chữ to | tên lớp + độ tin cậy. Xanh = đạt ngưỡng 0.70, xám = chưa đạt |
+| Góc trên trái, chữ to | tên lớp + độ tin cậy. Xanh = đạt ngưỡng 0.80, xám = chưa đạt |
 | Thanh xanh + `n/15` | đang giữ được bao nhiêu khung. Đủ 15 thì chốt cử chỉ |
 | Thanh cam + `HA TAY XUONG` | vừa chốt xong 1 cử chỉ, phải hạ tay đủ 10 khung mới nhận cử chỉ tiếp |
 | `MA: E1 7C __` | chuỗi hex đang nhập |
@@ -236,13 +236,13 @@ cd D:\IoT_Gesture_sequence_door_lock
 ```
 1. Làm cử chỉ palm, GIỮ YÊN tới khi thanh xanh đầy         (~0.5 giây)
 2. HẠ TAY xuống tới khi thanh cam đầy                       (~0.3 giây)
-3. Làm cử chỉ victory, giữ yên
+3. Làm cử chỉ ok, giữ yên
 4. Hạ tay
 5. Làm cử chỉ fist, giữ yên
 -> servo trên Wokwi quay, LED xanh sáng, OLED "ACCESS GRANTED"
 ```
 
-Điểm hay sai: **phải giữ yên tay, không lướt qua**. Một khung tụt dưới 0.70 là thanh
+Điểm hay sai: **phải giữ yên tay, không lướt qua**. Một khung tụt dưới 0.80 là thanh
 tiến trình đếm lại từ đầu.
 
 ---
@@ -274,7 +274,7 @@ mosquitto_sub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/#" -v
 
 **Giả lập gửi mã đúng (không cần webcam):**
 ```bash
-mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7CE13A","ts":1}'
+mosquitto_pub -h broker.hivemq.com -p 1883 -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7C4D3A","ts":1}'
 ```
 
 **Giả lập mở khóa (không cần Node-RED):**

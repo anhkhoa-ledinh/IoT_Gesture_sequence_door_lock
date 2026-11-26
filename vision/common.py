@@ -162,6 +162,69 @@ def ensure_hand_landmarker(cfg: dict, verbose: bool = True) -> Path:
 
 
 # ============================================================================
+#  3b. KET NOI MQTT — broker cong cong HOAC broker rieng (TLS + tai khoan)
+# ----------------------------------------------------------------------------
+#  Moi chuong trinh Python noi MQTT (gesture_lock.py, dem_10_lan.py,
+#  kiem_truoc_khi_demo.py) deu goi ham nay, nen doi broker chi can sua
+#  config.json -> mqtt.dung_broker_rieng, khong sua code.
+#
+#  Moi chuong trinh dung mot TAI KHOAN rieng ("vai tro"), broker phan quyen
+#  theo tung tai khoan (xem docs/BROKER_RIENG_TLS.md):
+#    laptop   : chi duoc GUI .../gesture va .../sequence
+#    giam_sat : chi duoc NGHE .../#  (dung cho cac script do va kiem tra)
+#  Mat khau KHONG nam trong config.json: nam trong file tai_khoan_file
+#  (mac dinh vision/mqtt_tai_khoan.json, da dua vao .gitignore).
+# ============================================================================
+
+def thong_so_mqtt(cfg: dict, vai_tro: str) -> dict:
+    """Tra ve thong so ket noi: host, port, tls, va neu dung broker rieng thi
+    them ca_file, username, password cua vai_tro."""
+    m = cfg["mqtt"]
+    if not m.get("dung_broker_rieng", False):
+        return {"host": m["broker"], "port": int(m["port"]), "tls": False}
+
+    r = m["broker_rieng"]
+    tk_path = resolve_path(r["tai_khoan_file"])
+    if not tk_path.exists():
+        raise FileNotFoundError(
+            f"Dang bat dung_broker_rieng nhung chua co {tk_path}.\n"
+            "Chay: .conda\\python.exe scripts\\tao_tai_khoan_mqtt.py --host <dia chi broker>"
+        )
+    with open(tk_path, "r", encoding="utf-8") as f:
+        tat_ca = json.load(f)
+    if vai_tro not in tat_ca:
+        raise KeyError(f"{tk_path.name} khong co tai khoan cho vai tro '{vai_tro}'")
+
+    ca_file = resolve_path(r["ca_file"])
+    if not ca_file.exists():
+        raise FileNotFoundError(f"Khong thay chung chi CA: {ca_file}")
+    return {
+        "host": r["host"],
+        "port": int(r["port"]),
+        "tls": True,
+        "ca_file": str(ca_file),
+        "username": tat_ca[vai_tro]["username"],
+        "password": tat_ca[vai_tro]["password"],
+    }
+
+
+def cau_hinh_mqtt_client(client, cfg: dict, vai_tro: str) -> tuple[str, int]:
+    """Gan TLS + tai khoan vao client paho neu dang dung broker rieng.
+
+    Tra ve (host, port) de goi client.connect_async(host, port, keepalive).
+    Voi broker cong cong thi khong gan gi, giu nguyen hanh vi cu.
+    """
+    ts = thong_so_mqtt(cfg, vai_tro)
+    if ts["tls"]:
+        import ssl
+        # CERT_REQUIRED + kiem ten may chu: chong gia mao broker (man-in-the-middle).
+        client.tls_set(ca_certs=ts["ca_file"], cert_reqs=ssl.CERT_REQUIRED,
+                       tls_version=ssl.PROTOCOL_TLS_CLIENT)
+        client.username_pw_set(ts["username"], ts["password"])
+    return ts["host"], ts["port"]
+
+
+# ============================================================================
 #  4. VE KHUNG XUONG BAN TAY
 # ============================================================================
 

@@ -38,7 +38,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "vision"))
-from common import FEATURE_DIM, load_config, resolve_path  # noqa: E402
+from common import FEATURE_DIM, cau_hinh_mqtt_client, load_config, resolve_path  # noqa: E402
 
 FLOWS_FILE = ROOT / "middleware" / "flows.json"
 KHOA_CONTEXT = "ma_hop_le"
@@ -258,9 +258,16 @@ def kiem_mqtt(cfg: dict) -> list[KetQua]:
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2,
                          client_id="tienkiem-" + uuid.uuid4().hex[:8])
     client.on_connect, client.on_message = on_connect, on_message
-    ten_broker = f"broker {m['broker']}:{m['port']}"
     try:
-        client.connect_async(m["broker"], int(m["port"]), int(m["keepalive"]))
+        # Broker rieng: TLS + tai khoan 'giam_sat' (chi nghe). Thieu file tai khoan
+        # hay chung chi thi bao ro thay vi treo.
+        host, port = cau_hinh_mqtt_client(client, cfg, "giam_sat")
+    except (FileNotFoundError, KeyError) as e:
+        return [KetQua(FAIL, "cau hinh broker rieng", str(e).splitlines())]
+    loai = "TLS, tai khoan giam_sat" if m.get("dung_broker_rieng") else "cong cong, khong TLS"
+    ten_broker = f"broker {host}:{port} ({loai})"
+    try:
+        client.connect_async(host, port, int(m["keepalive"]))
         client.loop_start()
         if not da_noi.wait(CHO_BROKER_GIAY):
             return [KetQua(FAIL, ten_broker, [f"khong noi duoc trong {CHO_BROKER_GIAY} giay",

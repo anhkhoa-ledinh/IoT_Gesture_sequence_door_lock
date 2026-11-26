@@ -27,5 +27,13 @@ middleware/access_log.csv
 # tuyet doi cua may, khong nen commit
 .vscode/
 
-# Thu muc chua de bai / prompt goc, khong phai san pham
+# De bai goc (khong phai san pham cua du an, khong commit)
 P/
+
+# BI MAT cua broker rieng (sinh boi scripts/tao_tai_khoan_mqtt.py) — KHONG commit
+vision/mqtt_tai_khoan.json
+firmware/secrets.h
+middleware/flows_broker_rieng.json
+
+# Video quay de lay du lieu (nang, co mat nguoi) - KHONG commit
+data_video/

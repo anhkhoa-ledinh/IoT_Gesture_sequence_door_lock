@@ -39,14 +39,14 @@
 |---|---|---|
 | `gesture` | string | tên lớp cử chỉ: `fist` / `palm` / `victory` / `thumb_up` / `point_up` / `ok` |
 | `hex` | string | 2 ký tự hex tương ứng, tra theo bảng mã |
-| `conf` | number | độ tin cậy softmax, làm tròn 2 chữ số. Luôn ≥ 0.70 vì dưới ngưỡng thì không được chấp nhận |
+| `conf` | number | độ tin cậy softmax, làm tròn 2 chữ số. Luôn ≥ `min_confidence` (0.80) vì dưới ngưỡng thì không được chấp nhận |
 | `ts` | number | Unix epoch giây |
 
 ### Ví dụ một chuỗi hoàn chỉnh
 
 ```json
 {"gesture":"palm","hex":"7C","conf":0.97,"ts":1789220966}
-{"gesture":"victory","hex":"E1","conf":0.93,"ts":1789220969}
+{"gesture":"ok","hex":"4D","conf":0.93,"ts":1789220969}
 {"gesture":"fist","hex":"3A","conf":0.88,"ts":1789220972}
 ```
 
@@ -64,7 +64,7 @@
 ### Payload
 
 ```json
-{"code":"7CE13A","ts":1789220972}
+{"code":"7C4D3A","ts":1789220972}
 ```
 
 | Trường | Kiểu | Ý nghĩa |
@@ -190,7 +190,7 @@ chấp nhận một cử chỉ, phải qua ít nhất 10 khung `none` mới nh�
 Không có luật này thì giữ yên một bàn tay 45 khung sẽ bị đếm thành 3 cử chỉ giống nhau
 và tự sinh ra một mật mã.
 
-**Mật mã mặc định:** `palm → victory → fist` = `7CE13A`
+**Mật mã mặc định:** `palm → ok → fist` = `7C4D3A` (đổi ngày 31/10 từ `7CE13A`)
 
 ---
 
@@ -213,9 +213,33 @@ Giả lập Python gửi mã đúng (Node-RED phải ra lệnh unlock):
 
 ```bash
 mosquitto_pub -h broker.hivemq.com -p 1883 \
-  -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7CE13A","ts":1789220972}'
+  -t "huit/ak_majespecter/gate/sequence" -m '{"code":"7C4D3A","ts":1789220972}'
 ```
 
 > **Lưu ý:** đây là broker công cộng. Mọi thứ bạn publish, người khác nghe được; và
 > người khác cũng publish vào topic của bạn được. Đừng dùng prefix chung chung như
 > `test/gate` — dễ đụng người lạ. Prefix có MSSV chính là để tránh việc này.
+
+---
+
+## 8. Chế độ broker riêng: TLS + tài khoản + phân quyền
+
+Bật bằng `vision/config.json → mqtt.dung_broker_rieng: true` (mặc định `false` = broker công
+cộng như trên). Topic và payload **không đổi**; chỉ khác cách kết nối:
+
+| | Broker công cộng | Broker riêng (EMQX Serverless) |
+|---|---|---|
+| Cổng | 1883, không mã hoá | 8883, TLS, kiểm chứng chỉ máy chủ |
+| Đăng nhập | không | mỗi chương trình một tài khoản |
+
+| Tài khoản | Được NGHE | Được GỬI |
+|---|---|---|
+| `gate_laptop` (Python) | — | `.../gesture`, `.../sequence` |
+| `gate_nodered` | `.../sequence`, `.../state` | `.../cmd` |
+| `gate_esp32` | `.../cmd`, `.../gesture` | `.../state` |
+| `gate_giam_sat` (script đo, kiểm tra) | `.../#` | — |
+| mọi trường hợp khác | cấm | cấm |
+
+Với broker riêng, lệnh `mosquitto_pub` ở mục 7 phải thêm
+`-p 8883 --cafile middleware/certs/emqx_ca_bundle.pem -u <tài khoản> -P <mật khẩu>`, và chỉ
+tài khoản có quyền mới gửi được. Hướng dẫn cài đặt: [BROKER_RIENG_TLS.md](BROKER_RIENG_TLS.md).

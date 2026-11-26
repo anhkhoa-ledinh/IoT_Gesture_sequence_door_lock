@@ -5,9 +5,10 @@ Hand Landmark Classification and MQTT**
 
 *Khóa cửa thông minh xác thực bằng chuỗi cử chỉ tay — hệ thống IoT bốn tầng*
 
-> **Trạng thái tài liệu (24/10/2026):** bản khung. Mọi con số trong báo cáo đều kèm nguồn
-> (file hoặc script sinh ra nó — xem Phụ lục). Chỗ nào chưa có số đo thật ghi **[CHƯA ĐO]**
-> và sẽ được điền sau phiên chạy thật và sau khi chạy lại notebook huấn luyện.
+> **Trạng thái tài liệu (31/10/2026):** đã điền số liệu huấn luyện, đánh giá và kiểm thử tự
+> động. Mọi con số đều kèm nguồn (file hoặc script sinh ra nó — xem Phụ lục). Chỗ còn ghi
+> **[CHƯA ĐO]** là các phép đo **chỉ làm được khi chạy đủ hệ thống** (camera + Wokwi + Node-RED):
+> 10 lần nhập mã, 18 test case bằng tay, độ trễ đầu-cuối.
 
 ---
 
@@ -15,7 +16,7 @@ Hand Landmark Classification and MQTT**
 
 Người dùng thực hiện một **chuỗi 3 cử chỉ tay** trước webcam. Mỗi cử chỉ được phân loại
 bằng MediaPipe HandLandmarker cộng một mạng MLP nhỏ, rồi ánh xạ thành 1 byte hex; ghép 3
-byte thành mật mã (mặc định `palm → victory → fist` = `7CE13A`). Middleware Node-RED kiểm
+byte thành mật mã (mặc định `palm → ok → fist` = `7C4D3A`, đổi ngày 31/10 — mục 5). Middleware Node-RED kiểm
 mã, đếm số lần sai, khóa tạm 30 giây sau 3 lần sai, và ra lệnh mở khóa cho ESP32.
 
 **Trong phạm vi:**
@@ -38,7 +39,7 @@ Tham số hệ thống nằm tập trung trong `vision/config.json`:
 | Tham số | Giá trị |
 |---|---|
 | Khung giữ ổn định để chấp nhận 1 cử chỉ | 15 |
-| Độ tin cậy tối thiểu | 0.70 |
+| Độ tin cậy tối thiểu | 0.80 (chọn bằng giả lập, mục 4.6; trước 31/10 tạm hạ còn 0.45) |
 | Số khung `none` tối thiểu giữa 2 cử chỉ | 10 |
 | Timeout chuỗi (tính từ cử chỉ được chấp nhận gần nhất) | 10 giây |
 | Độ dài mã | 3 cử chỉ |
@@ -67,7 +68,7 @@ Prefix topic: `huit/ak_majespecter/gate/`.
 | # | Topic | Publish → Subscribe | Khi nào | Payload |
 |---|---|---|---|---|
 | U1 | `huit/ak_majespecter/gate/gesture` | Python → ESP32 | mỗi khi chấp nhận 1 cử chỉ | `{"gesture":"victory","hex":"E1","conf":0.93,"ts":…}` |
-| **U2** | `huit/ak_majespecter/gate/sequence` | Python → Node-RED | khi đủ 3 cử chỉ | `{"code":"7CE13A","ts":…}` |
+| **U2** | `huit/ak_majespecter/gate/sequence` | Python → Node-RED | khi đủ 3 cử chỉ | `{"code":"7C4D3A","ts":…}` |
 | U3 | `huit/ak_majespecter/gate/state` | ESP32 → Node-RED | mỗi 5 giây và mỗi khi đổi trạng thái | `{"lock":"closed","attempts":0,"uptime":…}` |
 
 **Luồng uplink chính là U2:** webcam → MediaPipe trích 21 điểm mốc → vector 42 chiều →
@@ -172,8 +173,21 @@ victory → thumb_up → point_up → ok → none. Hệ quả nêu ở mục 7.5
 
 Vector đặc trưng 42 chiều (`vision/common.py`, `preprocess_landmarks`): lấy `(x, y)` của 21
 điểm mốc, dời gốc về cổ tay, lật trục x nếu là tay trái, chia cho giá trị tuyệt đối lớn
-nhất. Mạng: `Input(42) → Dropout(0.2) → Dense(20, relu) → Dropout(0.4) → Dense(10, relu) →
-Dense(7, softmax)`, khoảng 1 nghìn tham số.
+nhất.
+
+**Dữ liệu công khai trên GitHub — chỉ dùng để train (từ 31/10).** `vision/model/keypoint_github.csv`,
+15 620 mẫu 6 lớp cử chỉ (không có `none`), gom từ hai bộ landmark giấy phép Apache-2.0:
+`thatsabhishek/hand-gesture-recognition-using-mediapipe` (5 275 mẫu, gồm dữ liệu gốc của
+Kazuhito00 và kinivi) và `jaeeun/hand-gesture-recognition-using-mediapipe` (10 345 mẫu). Hai bộ
+dùng cùng pipeline MediaPipe 21 điểm → dời gốc → chia max_abs; khác biệt duy nhất là toạ độ
+pixel thay vì toạ độ chuẩn hoá, được `scripts/chuyen_du_lieu_github.py` đổi chính xác (nhân x
+với 480/640 rồi chuẩn hoá lại). Dữ liệu này chỉ được nối vào **phần train của mỗi fold**, với
+trọng số 0.5 (tổng trọng số GitHub mỗi lớp = 0.5 × số mẫu tự thu của lớp đó); mẫu `none` tự thu
+nhân trọng số ×2 vì GitHub không có lớp này.
+
+Mạng (từ 31/10): `Input(42) → Dense(64, relu) → Dropout(0.3) → Dense(32, relu) → Dropout(0.2) →
+Dense(7, softmax)`, 5 063 tham số. Mạng cũ: `Input(42) → Dropout(0.2) → Dense(20) →
+Dropout(0.4) → Dense(10) → Dense(7)`, khoảng 1 nghìn tham số.
 
 ### 4.2. Phương pháp đánh giá
 
@@ -187,24 +201,28 @@ Dense(7, softmax)`, khoảng 1 nghìn tham số.
 | Cách chia | `train_test_split` 80/20 ngẫu nhiên từng mẫu, phân tầng theo lớp | `StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=42)`, nhóm = `burst_id` |
 | Mẫu của một burst | rải ra **cả** train lẫn validation | nằm trọn trong **một** fold |
 | Con số báo cáo | độ chính xác trên 519 mẫu validation | trung bình ± độ lệch chuẩn qua 5 fold, ma trận nhầm lẫn gộp out-of-fold trên toàn bộ 2 504 mẫu |
-| Độ chính xác tổng thể | **83.8%** (435/519) — *bị thổi phồng, không dùng làm căn cứ* | **[CHƯA ĐO]** |
-| Model triển khai | model đánh giá (train trên 80%) | train lại trên 100% dữ liệu, số epoch = trung vị epoch tốt nhất của 5 fold |
+| Độ chính xác tổng thể | **83.8%** (435/519) — *bị thổi phồng, không dùng làm căn cứ* | **76.6%** out-of-fold; trung bình fold 76.5% ± 4.3 (model 31/10) |
+| Model triển khai | model đánh giá (train trên 80%) | train lại trên 100% dữ liệu tự thu + GitHub, số epoch = trung vị epoch tốt nhất của 5 fold (38) |
 
 Số liệu kiểm định chéo được notebook lưu ra `vision/model/eval_metrics.json`;
 `vision/eval_external.py` đọc file này khi so với HaGRID chứ không tự chia lại dữ liệu.
 
 ### 4.3. Độ chính xác từng lớp
 
-| Lớp | Validation ngẫu nhiên (26/09, **rò rỉ**) | 1-NN bỏ burst (23/10, sau vệ sinh) — *phép đo thô, không phải model* | 5 fold theo burst: trung bình ± độ lệch chuẩn | Out-of-fold |
+| Lớp | Validation ngẫu nhiên (26/09, **rò rỉ**) | 1-NN bỏ burst (23/10, sau vệ sinh) — *phép đo thô, không phải model* | 5 fold theo burst: trung bình ± độ lệch chuẩn (31/10) | Out-of-fold (31/10) |
 |---|---|---|---|---|
-| `fist` | 86.1% (62/72) | 66.5% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `palm` | 92.5% (74/80) | 85.4% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `victory` | 89.3% (75/84) | 52.4% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `thumb_up` | 84.0% (63/75) | 84.9% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `point_up` | 80.0% (48/60) | 61.7% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `ok` | 84.0% (63/75) | 89.0% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| `none` | 68.5% (50/73) | 63.5% | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
-| **Tổng thể** | **83.8%** (435/519) | **72.4%** | **[CHƯA ĐO]** | **[CHƯA ĐO]** |
+| `fist` | 86.1% (62/72) | 66.5% | 86.0% ± 10.1 | 86.0% (308/358) |
+| `palm` | 92.5% (74/80) | 85.4% | 88.9% ± 14.6 | 89.9% (358/398) |
+| `victory` | 89.3% (75/84) | 52.4% | 55.2% ± 28.6 | 58.1% (244/420) |
+| `thumb_up` | 84.0% (63/75) | 84.9% | 85.5% ± 16.8 | 83.3% (314/377) |
+| `point_up` | 80.0% (48/60) | 61.7% | 68.3% ± 8.7 | 68.3% (205/300) |
+| `ok` | 84.0% (63/75) | 89.0% | 79.3% ± 14.8 | 78.9% (295/374) |
+| `none` | 68.5% (50/73) | 63.5% | 69.8% ± 20.2 | 70.0% (194/277) |
+| **Tổng thể** | **83.8%** (435/519) | **72.4%** | **76.5% ± 4.3** | **76.6%** (1 918/2 504) |
+
+Độ lệch chuẩn từng lớp lớn (tới ±28.6 điểm với `victory`) vì mỗi fold chỉ có 2–3 burst mỗi
+lớp: một burst khó rơi vào fold nào là kéo cả fold đó xuống. Con số tổng thể ổn định hơn
+nhiều (±4.3).
 
 Cột "1-NN bỏ burst": với mỗi mẫu, tìm mẫu gần nhất **không cùng burst** trong không gian
 đặc trưng 42 chiều, xem có cùng nhãn không. Nó không đo model mà đo xem mỗi lần ghi có
@@ -213,11 +231,13 @@ thực duy nhất hiện có, trong lúc chờ chạy lại notebook.
 
 ### 4.4. Ma trận nhầm lẫn
 
-`docs/confusion_matrix.png` hiện là ma trận của **lần chia ngẫu nhiên ngày 26/09** (rò rỉ).
-Khi chạy lại notebook, file này bị thay bằng ma trận gộp out-of-fold của 5 fold:
-**[CHƯA ĐO]**.
+`docs/confusion_matrix.png` là ma trận gộp out-of-fold của 5 fold (model 31/10, 2 504 mẫu).
+Các cặp nhầm trên 10%: `victory → point_up` 19.3% (81/420), `point_up → victory` 15.7%
+(47/300), `thumb_up → fist` 14.9% (56/377), `victory → none` 14.3% (60/420), `point_up → none`
+12.0% (36/300). Hai cặp `victory ↔ point_up` và `thumb_up → fist` cũng là hai cặp mà phép
+1-NN bỏ burst đã chỉ ra từ 23/10 — đây là giới hạn của dữ liệu, không phải của mạng.
 
-Để đối chiếu về sau, các cặp nhầm lớn nhất trên ma trận cũ (rò rỉ) là: `none → ok` 15.1%
+Để đối chiếu, các cặp nhầm lớn nhất trên ma trận cũ (rò rỉ, 26/09) là: `none → ok` 15.1%
 (11/73), `thumb_up → fist` 14.7% (11/75), `ok → none` 13.3% (10/75), `point_up → victory`
 10.0% (6/60). Phép 1-NN bỏ burst cho cùng các cặp đó, cộng thêm `victory ↔ point_up` và
 `victory → none` nặng hơn nhiều (`victory → point_up` 88 mẫu, `victory → none` 81 mẫu trên
@@ -226,12 +246,22 @@ Khi chạy lại notebook, file này bị thay bằng ma trận gộp out-of-fol
 ### 4.5. Đánh giá trên tập ngoài HaGRID
 
 HaGRID (Kapitanov và cộng sự, giấy phép CC BY-SA 4.0) được dùng làm **tập kiểm thử độc
-lập**: không trộn vào huấn luyện (`USE_HAGRID_FOR_TRAINING = False`). Landmark được trích
+lập**: không trộn vào huấn luyện (`USE_HAGRID_FOR_TRAINING = False`). Từ 31/10 dữ liệu "người
+khác" để train lấy từ GitHub chứ không lấy từ HaGRID, nên tính độc lập vẫn giữ nguyên. Landmark được trích
 trên Kaggle bằng cùng hàm tiền xử lý, có test kiểm hai bản chép khớp tuyệt đối
 (`tests/test_preprocess_parity.py`). 300 mẫu mỗi lớp × 7 lớp = 2 100 mẫu.
 
-> Số liệu dưới đây đo bằng **model ngày 26/09** (train trên 80% dữ liệu gốc). Sau khi train
-> lại sẽ đo lại: **[CHƯA ĐO]**.
+> **Kết quả model 31/10** (`vision/eval_external.py`, `docs/confusion_matrix_hagrid.png`):
+>
+> | Phạm vi | Số mẫu | Model 26/09 | **Model 31/10** |
+> |---|---|---|---|
+> | Cả 7 lớp — con số thô | 2 100 | 53.8% | **72.7%** |
+> | 6 cử chỉ (bỏ `none`) | 1 800 | 62.2% | **84.7%** |
+> | 3 cử chỉ trong mật mã hiện tại (`palm`, `ok`, `fist`) | 900 | — | **96.2%** |
+>
+> Recall từng lớp (model 31/10): fist 95.0%, palm 99.7%, victory 94.3%, thumb_up 70.0%,
+> point_up 55.3%, ok 94.0%, none N/A. Phần dưới đây là phân tích **model 26/09**, giữ lại để
+> đối chiếu.
 
 **Bóc tách 4 mức:**
 
@@ -266,18 +296,51 @@ vì `no_gesture` và `like` đều dồn vào nó.
 | `ok` | 51.0% | 88.4% |
 | `none` | N/A | N/A |
 
-**Khoảng cách generalization so với dữ liệu tự thu: [CHƯA ĐO].** README trước đây so 83.8%
-(validation rò rỉ, 7 lớp) với 81.2% (HaGRID, 3 lớp) và kết luận "cách nhau 2.6 điểm". Phép
-so đó sai hai lần: con số tự thu bị thổi phồng, và hai bên không cùng phạm vi lớp. Sẽ so
-lại khi có số out-of-fold, cùng phạm vi lớp ở cả hai phía.
+**Khoảng cách generalization so với dữ liệu tự thu (model 31/10, cùng 7 lớp ở hai phía):**
+tự thu 76.6% out-of-fold, HaGRID 72.7% con số thô — cách nhau **3.9 điểm**. README trước đây so
+83.8% (validation rò rỉ, 7 lớp) với 81.2% (HaGRID, 3 lớp) và kết luận "cách nhau 2.6 điểm";
+phép so đó sai hai lần (con số tự thu bị thổi phồng, hai bên khác phạm vi lớp) và đã bỏ.
+
+### 4.6. Cải tiến huấn luyện ngày 31/10 và chọn ngưỡng
+
+Chi tiết từng bước: `docs/ket_qua_cai_tien_train.md`. Tóm tắt (cùng 5 fold theo burst, trung
+bình 3 lần train với seed khác nhau):
+
+| Cấu hình | Tự thu (OOF) | HaGRID 6 cử chỉ | Độ tin cậy trung vị | Kết luận |
+|---|---|---|---|---|
+| Mạng cũ, chỉ dữ liệu tự thu | 62.0% ± 1.2 | 64.3% | 0.55 | mốc gốc |
+| Mạng mới 64-32, bỏ dropout đầu vào | 73.1% ± 1.2 | 71.1% | 0.86 | giữ |
+| + dữ liệu GitHub + trọng số `none` ×2 | **78.9% ± 1.4** | **86.5%** | 0.93 | **giữ — cấu hình cuối** |
+| + 20 đặc trưng góc ngón tay | 78.3% ± 1.0 | 72.6% | 0.90 | bỏ |
+| + augmentation (1 seed) | 80.2% so với 80.4% | 91.3% so với 90.0% | — | bỏ, không khác |
+
+Độ tin cậy trung vị 0.55 của mạng cũ giải thích đúng hiện tượng lúc chạy thử ngày 24/10: mọi
+cử chỉ chỉ đạt 0.45–0.54 nên không qua được ngưỡng 0.70. Chạy cùng một khung hình webcam
+(ảnh chụp màn hình lúc làm `palm`) qua cả hai model: mạng cũ cho `palm` 0.42, mạng mới cho
+`palm` 0.997.
+
+**Chọn ngưỡng.** Notebook Bước 7b chạy đúng luật của máy trạng thái (15 khung liên tiếp ≈ 8
+mẫu của burst) trên dự đoán out-of-fold của 76 burst cử chỉ và 10 burst `none`:
+
+| Ngưỡng | Chấp nhận đúng | Chấp nhận sai | Chưa chấp nhận | `none` bị đọc nhầm |
+|---|---|---|---|---|
+| 0.45 | 63 | 6 | 7 | 2/10 |
+| 0.70 | 55 | 5 | 16 | 2/10 |
+| **0.80** | **52** | **2** | 22 | 1/10 |
+| 0.90 | 41 | 2 | 33 | 1/10 |
+
+Luật: ngưỡng nhỏ nhất mà burst bị chấp nhận sai ≤ 3% → **0.80**. Khi đã chấp nhận thì đúng
+52/54 = 96.3%. "Chưa chấp nhận" chỉ có nghĩa là trong 2 giây của burst chưa đủ 15 khung —
+người dùng giữ tay lâu hơn chứ không bị sai mã. Đây là ước lượng từ giả lập trên dữ liệu đã
+ghi; con số thật phải đo bằng `scripts/dem_10_lan.py`.
 
 ---
 
 ## 5. Quyết định đổi mật mã
 
 Ngày 27/09 (commit `489e803`) mật mã đổi từ `victory → palm → ok` (`E17C4D`) sang
-`palm → victory → fist` (`7CE13A`). Lý do được lưu nguyên văn trong `vision/config.json`
-→ `secret._ly_do_doi_ma`:
+`palm → victory → fist` (`7CE13A`). Lý do khi đó, lưu trong `vision/config.json` →
+`secret._ly_do_doi_ma` (từ 31/10 trường này ghi lý do của lần đổi mới):
 
 > Ma cu victory->palm->ok bi bo vi lop 'ok' nam trong hai trong ba cap nham nhau tren ma
 > tran nham lan: none->ok 15.1% va ok->none 13.3%. Chieu none->ok nguy hiem nhat: mot ban
@@ -290,7 +353,29 @@ bị rò rỉ burst (mục 7.1), nên không còn làm căn cứ được. Phép
 tự gần như ngược lại: `victory` 52.4% là lớp yếu nhất, `fist` 66.5% đứng thứ ba từ dưới
 lên, trong khi `ok` 89.0% là lớp tốt nhất. Về hướng thì lý do *chiều `none → ok` nguy
 hiểm* vẫn đúng; về số thì chưa kết luận được. **Giữ hay đổi mã sẽ quyết định trên số liệu
-kiểm định chéo 5 fold sau khi train lại: [CHƯA ĐO].** Mật mã hiện tại chưa bị đổi.
+kiểm định chéo 5 fold sau khi train lại** — đã quyết định ngày 31/10, xem ngay dưới.
+
+**Quyết định (31/10): đổi sang `palm → ok → fist` (`7C4D3A`).** Căn cứ là số liệu kiểm
+định chéo 5 fold và giả lập máy trạng thái ở ngưỡng 0.80 (`docs/ket_qua_cai_tien_train.md`
+mục 5):
+
+| Cử chỉ | Recall OOF | Burst chấp nhận đúng (giả lập, ngưỡng 0.80) | Bị chấp nhận sai |
+|---|---|---|---|
+| `palm` | 89.9% | 13/14 | 0 |
+| `ok` | 78.9% | 12/13 | 0 |
+| `fist` | 86.0% | 9/12 | 0 |
+| `victory` (mã cũ) | 58.1% | 7/14 | 0 |
+| `thumb_up` | 83.3% | 9/13 | 2 |
+
+`victory` chỉ được nhận trong một nửa số lần thử — người dùng phải giữ tay lâu và dễ hết
+timeout. Không dùng `thumb_up` vì `thumb_up → fist` 14.9%. Lý do cũ "`none → ok` nguy hiểm"
+không còn đứng được: trên ma trận mới `none → ok` là 7.2% (20/277), thấp hơn `none → victory`
+9.4% (26/277). Trên HaGRID cả `ok` (94.0%) và `victory` (94.3%) đều tốt — lý do đổi là độ dùng
+được trên **tay người dùng thật**, không phải trên người lạ.
+
+Đổi mã phải sửa đồng thời `vision/config.json → secret.default_code` và hằng `MA_MAC_DINH`
+trong `middleware/flows.json`, rồi **import lại flow và khởi động lại Node-RED** (mã đang chạy
+nằm trong flow context — mục 7.6). `scripts/kiem_truoc_khi_demo.py` báo FAIL nếu hai nơi lệch.
 
 Không gian mã: 6 cử chỉ có mã × 3 vị trí, cho phép lặp → 6³ = **216** tổ hợp (tính từ cấu
 hình, xem 7.2).
@@ -301,7 +386,14 @@ hình, xem 7.2).
 
 ### 6.1. Kiểm thử đơn vị (không cần phần cứng)
 
-`.conda\python.exe -m pytest` ngày 24/10/2026: **101 passed, 0 failed.**
+`.conda\python.exe -m pytest` ngày 24/10/2026: **101 passed, 0 failed.** Chạy lại ngày 31/10 sau khi đổi
+mã và ngưỡng: **101 passed**; sau khi thêm chế độ broker riêng: **112 passed** (Python 3.13, TensorFlow 2.21; hai test đọc mã từ config đã sửa theo
+mã mới).
+
+**Kiểm thử logic tầng 3 (mới, 31/10):** `node tests/kiem_thu_flow_node.js` đọc thẳng
+`middleware/flows.json`, chạy đúng mã nguồn các node function với flow context giả và đồng hồ
+giả: **24/24 đạt**, phủ phần logic Node-RED của TC-01→05, TC-13, TC-15→17 (bảng chi tiết ở cuối
+`docs/TEST_CASES.md`). Phép này không kiểm được ESP32, mạng thật hay giao diện.
 
 | File | Kiểm gì |
 |---|---|
@@ -317,18 +409,21 @@ Kiểm thử đơn vị **không** chứng minh hệ thống chạy end-to-end.
 
 ### 6.2. Kiểm thử hệ thống
 
-Đến ngày 23/10/2026: `middleware/access_log.csv` **chưa tồn tại** và chưa ô nào trong 18
-test case được điền — **chưa có bằng chứng hệ thống từng chạy end-to-end.**
+Ngày 24/10/2026 lần đầu chạy đủ Wokwi + Node-RED: `middleware/access_log.csv` có 8 dòng
+`MO TU DASHBOARD` (08:23–08:26 giờ VN) và OLED đổi sang `ACCESS GRANTED` — **đường downlink
+Dashboard → Node-RED → MQTT → ESP32 đã chạy thật**. Servo chưa quay ở lần đó; firmware đã sửa
+cho buzzer dùng kênh LEDC riêng (nghi `tone()` tranh kênh với servo), cần chạy lại để xác nhận.
+Chưa có lần nhập mã bằng cử chỉ nào được ghi log, và chưa ô nào trong 18 test case được điền
+bằng tay — **luồng cử chỉ → mở khóa đầu-cuối vẫn chưa có bằng chứng.**
 
 | Hạng mục | Kết quả | Nguồn |
 |---|---|---|
-| 10 lần nhập mã đúng, model 26/09 | **[CHƯA ĐO]** | `docs/ket_qua_10_lan.md` (sinh bởi `scripts/dem_10_lan.py`) |
-| 10 lần nhập mã đúng, sau khi thu thêm dữ liệu và train lại | **[CHƯA ĐO]** | như trên, mục thứ hai |
+| 10 lần nhập mã đúng, model 31/10, mã `7C4D3A`, ngưỡng 0.80 | **[CHƯA ĐO]** | `docs/ket_qua_10_lan.md` (sinh bởi `scripts/dem_10_lan.py`) |
 | 18 test case | **[CHƯA ĐO]** | `docs/TEST_CASES.md` |
-| TC-04 lockout chặn cả mã đúng | **[CHƯA ĐO]** | TC-04 |
+| TC-04 lockout chặn cả mã đúng | logic Node-RED **đạt** (kiểm thử tự động); chạy thật **[CHƯA ĐO]** | TC-04, `tests/kiem_thu_flow_node.js` |
 | TC-14 lockout chặn cả nút mở khẩn cấp | **[CHƯA ĐO]** | TC-14 |
 | TC-10 mất mạng mà video không đơ | **[CHƯA ĐO]** | TC-10 |
-| TC-17 `access_log.csv` ghi đúng | **[CHƯA ĐO]** | TC-17, `docs/thong_ke_access_log.md` (sinh bởi `scripts/doc_access_log.py`) |
+| TC-17 `access_log.csv` ghi đúng | logic **đạt** (tự động); file thật đã ghi 8 dòng mở khẩn cấp ngày 24/10; nhập mã thật **[CHƯA ĐO]** | TC-17, `docs/thong_ke_access_log.md` (sinh bởi `scripts/doc_access_log.py`) |
 | Độ trễ `sequence` → `cmd` | **[CHƯA ĐO]** | cột "Trễ cmd" trong `docs/ket_qua_10_lan.md` |
 
 ---
@@ -377,7 +472,7 @@ nhãn khác. Kiểm thêm: thử chia nhóm theo burst bằng một lần `Group
 
 | | Trước | Sau |
 |---|---|---|
-| Độ chính xác validation tổng thể | 83.8% — rò rỉ | **[CHƯA ĐO]** (kiểm định chéo 5 fold, chạy sau khi thu thêm dữ liệu) |
+| Độ chính xác validation tổng thể | 83.8% — rò rỉ | **76.6%** out-of-fold, kiểm định chéo 5 fold theo burst (model 31/10, có thêm dữ liệu GitHub ở phần train); mạng cũ trên cùng cách đánh giá: 62.0% |
 | 1-NN bỏ burst | 69.7% (2 594 mẫu) | 72.4% (2 504 mẫu, sau vệ sinh) |
 | Mẫu có < 50% láng giềng ngoài burst cùng nhãn | 37.4% | 33.9% |
 
@@ -410,6 +505,13 @@ mật mã trong `config.json`, tiêu chí TC-18, và cách `eval_external.py` l�
 
 ### 7.2. Broker công cộng không có xác thực và mã hóa
 
+> **Cập nhật 31/10:** đã hiện thực chế độ **broker riêng** (EMQX Serverless, TLS cổng 8883, mỗi
+> chương trình một tài khoản, phân quyền theo topic — chỉ Node-RED gửi được `.../cmd`), bật
+> bằng `mqtt.dung_broker_rieng` trong `config.json`. Đã kiểm trên broker thử nghiệm cục bộ: 16/16
+> phép thử phân quyền đạt, broker giả mạo bị từ chối, Node-RED nạp flow TLS và chạy đúng
+> unlock/deny. Chưa chạy trên EMQX thật. Chi tiết: `docs/BROKER_RIENG_TLS.md`. Phần dưới mô tả
+> rủi ro của **chế độ mặc định** (broker công cộng), vẫn là chế độ đang dùng cho tới khi bật.
+
 `broker.hivemq.com:1883` không xác thực, không TLS. **Tiền tố topic chỉ để tránh trùng với
 người khác, không phải biện pháp bảo mật** — tên topic nằm trong mã nguồn và trong mọi bản
 tin. Đọc mã firmware và flow cho thấy cụ thể:
@@ -440,6 +542,11 @@ cũ (`thumb_up → fist` 11/75), 1-NN bỏ burst (`fist → thumb_up` 60 mẫu, 
 mẫu), và HaGRID (`thumb_up` recall 7.7%, dồn vào `fist`). Vector cũng không chuẩn hóa góc
 xoay, nên cùng một cử chỉ ở hai góc nghiêng cho hai vector cách xa nhau.
 
+**Đã thử ngày 31/10:** thêm 20 đặc trưng góc ngón tay (cos góc 15 khớp + 5 tỉ lệ khoảng cách,
+bất biến khi xoay). Trên dữ liệu tự thu không tốt hơn (78.3% so với 78.9%, 3 seed), trên HaGRID
+kém hẳn (72.6% so với 86.5%) — nên **không** dùng. `thumb_up → fist` vẫn 14.9% trên model cuối.
+Hướng còn lại là thêm `z` / world landmarks (mục 8).
+
 ### 7.5. Dữ liệu một người, một webcam, một điều kiện ánh sáng
 
 Toàn bộ dữ liệu huấn luyện do một người thu trên một webcam. Nặng hơn nữa: **mỗi lớp được
@@ -448,6 +555,11 @@ thu trong đúng một phiên**, theo thứ tự cố định. Lớp và bối c
 chỉ học hình dạng bàn tay. Con số thô 53.8% trên HaGRID — người khác, máy ảnh khác — là
 dấu hiệu của giới hạn này. Kế hoạch thu thêm: 3 phiên ngắn, mỗi phiên đủ cả 7 lớp xen kẽ,
 đổi hẳn điều kiện giữa các phiên.
+
+**Đã giảm một phần ngày 31/10** bằng 15 620 mẫu GitHub do người khác thu: HaGRID 6 cử chỉ tăng
+từ 64.3% lên 86.5% (trung bình 3 seed). Nhưng dữ liệu tự thu — thứ duy nhất dùng để **đánh
+giá** — vẫn là một người, một phiên mỗi lớp; con số 76.6% vẫn chưa nói được gì về điều kiện
+ánh sáng hay chỗ ngồi khác.
 
 ### 7.6. Các hạn chế vận hành khác
 
@@ -466,7 +578,8 @@ dấu hiệu của giới hạn này. Kế hoạch thu thêm: 3 phiên ngắn, m
 
 ## 8. Hướng phát triển
 
-1. **Broker riêng kèm TLS và xác thực.** Ví dụ Mosquitto hoặc HiveMQ Cloud, cổng 8883, tài
+1. **~~Broker riêng kèm TLS và xác thực~~ — đã làm ngày 31/10** (mục 7.2, `docs/BROKER_RIENG_TLS.md`);
+   còn phải chạy trên EMQX thật. Mô tả ban đầu: Mosquitto hoặc HiveMQ Cloud, cổng 8883, tài
    khoản riêng cho từng thiết bị, ACL theo topic: chỉ Node-RED được publish `.../cmd`, chỉ
    laptop được publish `.../sequence`. Đây là thay đổi giải quyết được phần lớn mục 7.2.
 2. **Băm SHA-256 chuỗi mã trước khi lưu.** Flow context và `access_log.csv` chỉ giữ giá trị
@@ -493,7 +606,11 @@ dấu hiệu của giới hạn này. Kế hoạch thu thêm: 3 phiên ngắn, m
 | `palm` 0 burst validation khi chia một lần; 30% seed để trống một lớp | phép thử `GroupShuffleSplit` trên dữ liệu đã vệ sinh, 23/10; ghi lại trong markdown Bước 3 của notebook ở commit `d305068` |
 | Bóc tách 4 mức HaGRID, recall/precision từng lớp, `bbox_area_frac` 1.58% | `vision/eval_external.py` với model 26/09; `vision/model/extract_report.json`; README mục 7.2.1 |
 | 216 tổ hợp, 36 phút dò toàn bộ | tính từ `vision/config.json` (6 cử chỉ, 3 vị trí, 3 lần sai, 30 giây) |
-| 101 unit test pass | `.conda\python.exe -m pytest`, 24/10/2026 |
-| Số liệu kiểm định chéo 5 fold | `vision/model/eval_metrics.json` — **[CHƯA ĐO]** |
+| 101 unit test pass | `.conda\python.exe -m pytest`, 24/10/2026 và 31/10/2026 |
+| 24/24 kiểm thử logic Node-RED | `node tests/kiem_thu_flow_node.js`, 31/10/2026 |
+| Bảng cải tiến, 3 seed, giả lập theo từng lớp | `docs/ket_qua_cai_tien_train.md` (script thử nghiệm chạy ngoài repo, cùng quy trình notebook) |
+| HaGRID model 31/10: 72.7% / 84.7% / 96.2%, recall từng lớp | `vision/eval_external.py`, 31/10/2026 |
+| `palm` 0.42 → 0.997 trên cùng một khung hình | chạy `GestureClassifier` của `gesture_lock.py` trên ảnh chụp màn hình webcam ngày 24/10, model 26/09 và model 31/10 |
+| Số liệu kiểm định chéo 5 fold, ngưỡng 0.80, bảng giả lập | `vision/model/eval_metrics.json` (notebook chạy 31/10/2026 05:46) |
 | 10 lần nhập mã | `docs/ket_qua_10_lan.md` — **[CHƯA ĐO]** |
 | 18 test case | `docs/TEST_CASES.md` — **[CHƯA ĐO]** |

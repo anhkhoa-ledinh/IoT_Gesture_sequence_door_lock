@@ -18,6 +18,7 @@
 
 #include <Arduino.h>   // .cpp phai tu khai bao, .ino duoc them ngam
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <ESP32Servo.h>
@@ -35,6 +36,9 @@ static const uint8_t PIN_BUZZER    =  5;  // Buzzer
 static const uint8_t PIN_LED_GREEN = 25;  // LED xanh - mo khoa
 static const uint8_t PIN_LED_RED   = 26;  // LED do   - tu choi / lockout
 
+// Kenh LEDC rieng cho buzzer: kenh 7 thuoc timer 3, servo chi dung timer 0/1.
+static const uint8_t BUZZER_LEDC_CH = 7;
+
 // ============================================================================
 //  2. MANG VA MQTT
 // ============================================================================
@@ -42,8 +46,28 @@ static const char* WIFI_SSID    = "Wokwi-GUEST";
 static const char* WIFI_PASS    = "";   // Wokwi-GUEST khong co mat khau
 static const int   WIFI_CHANNEL = 6;
 
+// --- Chon broker ---------------------------------------------------------
+// Mac dinh: broker CONG CONG broker.hivemq.com:1883, khong ma hoa, khong tai khoan.
+// Neu co file secrets.h (do scripts/tao_tai_khoan_mqtt.py sinh ra, KHONG commit)
+// voi MQTT_DUNG_BROKER_RIENG 1 thi chuyen sang BROKER RIENG: TLS cong 8883,
+// kiem chung chi may chu bang CA trong ca_cert.h, dang nhap tai khoan esp32.
+// Tai khoan esp32 chi duoc NGHE .../cmd, .../gesture va GUI .../state —
+// ke co lay duoc mat khau tu firmware cung KHONG gui duoc lenh mo cua.
+#if __has_include("secrets.h")
+#include "secrets.h"
+#endif
+#ifndef MQTT_DUNG_BROKER_RIENG
+#define MQTT_DUNG_BROKER_RIENG 0
+#endif
+
+#if MQTT_DUNG_BROKER_RIENG
+#include "ca_cert.h"
+static const char*    MQTT_HOST = MQTT_HOST_RIENG;
+static const uint16_t MQTT_PORT = MQTT_PORT_RIENG;
+#else
 static const char*    MQTT_HOST = "broker.hivemq.com";
 static const uint16_t MQTT_PORT = 1883;
+#endif
 
 // TODO: doi "ak_majespecter" thanh MSSV that. Phai sua dong bo 3 noi:
 //       vision/config.json  |  firmware/gate_lock.cpp (day)  |  middleware/flows.json
@@ -70,7 +94,11 @@ static const uint8_t CODE_LEN = 3;  // do dai ma = 3 cu chi
 // ============================================================================
 //  4. BIEN TRANG THAI TOAN CUC
 // ============================================================================
-WiFiClient       wifiClient;
+#if MQTT_DUNG_BROKER_RIENG
+WiFiClientSecure wifiClient;            // TLS
+#else
+WiFiClient       wifiClient;            // TCP thuong
+#endif
 PubSubClient     mqtt(wifiClient);
 Servo            gateServo;
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
@@ -175,13 +203,17 @@ void setupHardware() {
   digitalWrite(PIN_LED_RED,   LOW);
   pinMode(PIN_BUZZER, OUTPUT);
 
-  // ESP32Servo va tone() cung dung bo LEDC. Chi cap 2 timer cho servo de
-  // con timer trong cho tone() dieu khien buzzer, tranh giành tài nguyên.
+  // Servo chi duoc cap timer 0 va 1 cua bo LEDC.
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   gateServo.setPeriodHertz(50);                 // SG90 chay o 50 Hz
   gateServo.attach(PIN_SERVO, 500, 2400);       // do rong xung 0.5ms - 2.4ms
   gateServo.write(SERVO_CLOSED_DEG);            // khoi dong o trang thai KHOA
+
+  // Buzzer xin kenh LEDC SAU khi servo da attach. Khong dung tone(): tone()
+  // cua core 2.x mac dinh dung kenh 0 (timer 0) va ghi de xung 50 Hz cua servo.
+  ledcSetup(BUZZER_LEDC_CH, 2000, 8);
+  ledcAttachPin(PIN_BUZZER, BUZZER_LEDC_CH);
 
   Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL);
   oledOk = display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
@@ -274,7 +306,14 @@ void updateMqtt() {
   snprintf(clientId, sizeof(clientId), "esp32-gate-%04lX%04lX",
            (unsigned long)random(0x10000), (unsigned long)random(0x10000));
 
-  if (mqtt.connect(clientId)) {
+#if MQTT_DUNG_BROKER_RIENG
+  // Bat tay TLS mat 1-3 giay va CHAN vong loop trong luc do — chi xay ra khi
+  // ket noi lai, khong anh huong luc dang chay binh thuong.
+  bool ok = mqtt.connect(clientId, MQTT_USER_RIENG, MQTT_PASS_RIENG);
+#else
+  bool ok = mqtt.connect(clientId);
+#endif
+  if (ok) {
     mqtt.subscribe(TOPIC_CMD);
     mqtt.subscribe(TOPIC_GESTURE);
     publishState();   // bao trang thai ngay khi vua noi lai duoc
@@ -380,11 +419,11 @@ void updateBuzzer() {
   if (!timeReached(beep.nextChangeMs)) return;
 
   if (beep.soundOn) {
-    noTone(PIN_BUZZER);
+    ledcWriteTone(BUZZER_LEDC_CH, 0);           // tan so 0 = tat tieng
     beep.soundOn      = false;
     beep.nextChangeMs = millis() + beep.offMs;
   } else {
-    tone(PIN_BUZZER, beep.freq);
+    ledcWriteTone(BUZZER_LEDC_CH, beep.freq);
     beep.soundOn      = true;
     beep.remaining--;
     beep.nextChangeMs = millis() + beep.onMs;
@@ -497,6 +536,9 @@ void setup() {
   WiFi.begin(WIFI_SSID, WIFI_PASS, WIFI_CHANNEL);
   nextWifiTryMs = millis() + WIFI_RETRY_MS;
 
+#if MQTT_DUNG_BROKER_RIENG
+  wifiClient.setCACert(CA_BUNDLE_PEM);   // tu choi broker gia mao (sai chung chi)
+#endif
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
   mqtt.setCallback(onMqttMessage);
   nextMqttTryMs  = millis();

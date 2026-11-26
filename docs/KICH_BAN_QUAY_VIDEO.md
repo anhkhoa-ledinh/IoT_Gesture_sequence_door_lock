@@ -76,11 +76,11 @@ mã, và ESP32 điều khiển khóa. Hiện khóa đang đóng."*
 |---|---|
 | Làm `palm`, giữ yên tới khi thanh xanh đầy 15/15. | Overlay `MA: 7C __ __`, OLED `CODE 7C __ __`. |
 | Hạ tay khỏi khung tới khi thanh cam (`HA TAY XUONG`) đầy. | — |
-| Làm `victory`, giữ yên; hạ tay. | `MA: 7C E1 __`. |
+| Làm `ok`, giữ yên; hạ tay. | `MA: 7C 4D __`. |
 | Làm `fist`, giữ yên. | Servo quay 90°, LED xanh, OLED `ACCESS GRANTED`, 1 tiếng bíp. Dashboard: ô kết quả `MO KHOA`, ô trạng thái ESP32 `DA MO`, bảng lịch sử thêm dòng `DUNG — MO KHOA`, cột "Thành công" của biểu đồ tăng 1. |
 | Đợi 5 giây. | Servo tự về 0°, OLED về `LOCKED`. |
 
-Lời dẫn: *"Ba cử chỉ được ghép thành mã 7CE13A, gửi qua MQTT lên Node-RED. Node-RED kiểm
+Lời dẫn: *"Ba cử chỉ được ghép thành mã 7C4D3A, gửi qua MQTT lên Node-RED. Node-RED kiểm
 mã đúng và gửi lệnh mở khóa xuống ESP32 — đó là luồng downlink."*
 
 ### Cảnh 3 — Nhập chuỗi sai, bị từ chối (~25 giây)
@@ -97,7 +97,7 @@ Nếu model đọc nhầm thành cử chỉ khác thì vẫn là một mã sai �
 |---|---|
 | Nhập thêm một chuỗi sai (`thumb_up` ×3). | `SAI (lan 2/3)`. |
 | Nhập chuỗi sai lần thứ ba. | Node-RED gửi `lockout`: OLED **đếm ngược từ 30**, LED đỏ **sáng liên tục** (không nháy). Dashboard: ô kết quả `LOCKOUT`. |
-| **Ngay lập tức** nhập **chuỗi đúng** `palm → victory → fist`. | Servo **không** quay, OLED vẫn đếm ngược, không có tiếng bíp mở khóa. Ô kết quả `BI CHAN`, bảng lịch sử thêm dòng `BI CHAN (dang lockout)`. |
+| **Ngay lập tức** nhập **chuỗi đúng** `palm → ok → fist`. | Servo **không** quay, OLED vẫn đếm ngược, không có tiếng bíp mở khóa. Ô kết quả `BI CHAN`, bảng lịch sử thêm dòng `BI CHAN (dang lockout)`. |
 | *(nên có)* Vẫn trong lockout, bấm **MỞ KHẨN CẤP** trên Dashboard. | Servo vẫn **không** quay; buzzer kêu **1 tiếng trầm** — ESP32 cố ý bỏ qua `unlock` khi đang khóa (TC-14). |
 
 Phải làm xong chuỗi đúng trong vòng 30 giây lockout: nhập 3 cử chỉ mất khoảng 5–10 giây,

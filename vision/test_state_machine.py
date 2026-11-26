@@ -69,15 +69,15 @@ class SequenceTestBase(unittest.TestCase):
 class TestChuoiDung(SequenceTestBase):
 
     def test_kich_ban_1_chuoi_dung_ra_dung_ma(self):
-        """KICH BAN 1 — palm, victory, fist lam dung luat -> ma 7CE13A."""
-        for label in ("palm", "victory", "fist"):
+        """KICH BAN 1 — palm, ok, fist lam dung luat -> ma 7C4D3A (ma tu 31/10)."""
+        for label in ("palm", "ok", "fist"):
             self.feed(label, self.CONF_OK, self.N_STABLE)
             self.feed_none(self.N_NONE)
 
         self.assertEqual(len(self.gestures), 3, "phai chap nhan dung 3 cu chi")
-        self.assertEqual([g[0] for g in self.gestures], ["palm", "victory", "fist"])
-        self.assertEqual([g[1] for g in self.gestures], ["7C", "E1", "3A"])
-        self.assertEqual(self.sequences, ["7CE13A"])
+        self.assertEqual([g[0] for g in self.gestures], ["palm", "ok", "fist"])
+        self.assertEqual([g[1] for g in self.gestures], ["7C", "4D", "3A"])
+        self.assertEqual(self.sequences, ["7C4D3A"])
         self.assertEqual(self.sequences[0], self.cfg["secret"]["default_code"])
 
     def test_tu_reset_sau_khi_du_chuoi(self):
@@ -272,7 +272,7 @@ class TestThayTheClassifier(SequenceTestBase):
 
         # Dung chuoi khung y het kich ban 1.
         kich_ban = []
-        for label in ("palm", "victory", "fist"):
+        for label in ("palm", "ok", "fist"):
             kich_ban += [(label, self.CONF_OK)] * self.N_STABLE
             kich_ban += [("none", 0.0)] * self.N_NONE
 
@@ -285,7 +285,7 @@ class TestThayTheClassifier(SequenceTestBase):
             label, conf = clf.classify(None)
             self.sm.update(label, conf)
 
-        self.assertEqual(self.sequences, ["7CE13A"])
+        self.assertEqual(self.sequences, ["7C4D3A"])
 
     def test_khong_the_tao_base_class_thieu_classify(self):
         """Quen viet classify() thi phai bao loi ngay luc tao doi tuong."""

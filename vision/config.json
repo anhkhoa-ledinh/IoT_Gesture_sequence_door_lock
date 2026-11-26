@@ -6,6 +6,14 @@
     "broker": "broker.hivemq.com",
     "port": 1883,
     "keepalive": 60,
+    "dung_broker_rieng": false,
+    "_ghi_chu_broker_rieng": "false = broker.hivemq.com:1883 cong cong (nhu cu). true = broker rieng trong muc broker_rieng: TLS cong 8883 + moi chuong trinh mot tai khoan, broker phan quyen theo topic. Huong dan: docs/BROKER_RIENG_TLS.md. Bat true thi PHAI doi ca firmware (firmware/secrets.h) va flow Node-RED (middleware/flows_broker_rieng.json) cung luc.",
+    "broker_rieng": {
+      "host": "THAY_BANG_DIA_CHI_DEPLOYMENT.emqxsl.com",
+      "port": 8883,
+      "ca_file": "../middleware/certs/emqx_ca_bundle.pem",
+      "tai_khoan_file": "mqtt_tai_khoan.json"
+    },
     "client_id_prefix": "gatevision-",
     "topic_prefix": "huit/ak_majespecter/gate/",
     "topics": {
@@ -40,7 +48,8 @@
 
   "thresholds": {
     "stable_frames": 15,
-    "min_confidence": 0.70,
+    "min_confidence": 0.8,
+    "_nguon_min_confidence": "Chon ngay 31/10 bang gia lap may trang thai tren du doan out-of-fold (notebook Buoc 7b, eval_metrics.json -> nguong_de_xuat): nguong nho nhat ma so burst bi chap nhan SAI <= 3%. Gia tri 0.45 truoc do la ha tay tam thoi vi model cu chi tu tin 0.45-0.54. Neu thay giu tay qua lau moi nhan, co the ha xuong 0.7 (doi lai: sai 5/76 burst thay vi 2/76).",
     "none_gap_frames": 10,
     "sequence_timeout_sec": 10,
     "code_length": 3,
@@ -52,9 +61,10 @@
   },
 
   "secret": {
-    "default_code": "7CE13A",
-    "_giai_thich": "palm(7C) -> victory(E1) -> fist(3A). Ma that duoc giu trong flow context cua Node-RED.",
-    "_ly_do_doi_ma": "Ma cu victory->palm->ok bi bo vi lop 'ok' nam trong hai trong ba cap nham nhau tren ma tran nham lan: none->ok 15.1% va ok->none 13.3%. Chieu none->ok nguy hiem nhat: mot ban tay vo nghia co the bi ghi nhan thanh mot byte ma va lam hong chuoi dang nhap. Ma moi chi dung ba lop chinh xac cao nhat: palm 92.5%, victory 89.3%, fist 86.1%. Lop 'ok' VAN la cu chi hop le va van nam trong model, chi khong dung trong mat ma."
+    "default_code": "7C4D3A",
+    "_giai_thich": "palm(7C) -> ok(4D) -> fist(3A). Ma that duoc giu trong flow context cua Node-RED (hang MA_MAC_DINH trong middleware/flows.json phai khop).",
+    "_ly_do_doi_ma": "Doi ngay 31/10 tu 7CE13A (palm -> victory -> fist) sang 7C4D3A. Can cu: kiem dinh cheo 5 fold chia theo burst (eval_metrics.json), khong phai validation ro ri cu. Tren du lieu tu thu victory chi dung 58.1% (bi doc thanh point_up 19.3%, thanh none 14.3%); gia lap may trang thai o nguong 0.8 chi chap nhan duoc 7/14 burst victory trong 2 giay, trong khi ok duoc 12/13, palm 13/14, fist 9/12, va ca ba khong co burst nao bi chap nhan sai. Tren HaGRID (nguoi la) ca bon lop deu tren 94%, nen ly do doi la do dung tren tay nguoi dung that. Khong dung thumb_up vi thumb_up -> fist 14.9%. Khong gian ma van 216 to hop.",
+    "_ma_cu": "7CE13A"
   },
 
   "model": {

@@ -39,6 +39,7 @@ from mediapipe.tasks import python as mp_tasks
 from mediapipe.tasks.python import vision as mp_vision
 
 from common import (
+    cau_hinh_mqtt_client,
     draw_landmarks,
     ensure_hand_landmarker,
     gesture_tables,
@@ -325,8 +326,6 @@ class MqttPublisher:
 
     def __init__(self, cfg: dict) -> None:
         m = cfg["mqtt"]
-        self.host = m["broker"]
-        self.port = int(m["port"])
         self.keepalive = int(m["keepalive"])
 
         prefix = m["topic_prefix"]
@@ -342,6 +341,11 @@ class MqttPublisher:
         self.client.on_disconnect = self._on_disconnect
         self.client.reconnect_delay_set(min_delay=1, max_delay=16)
 
+        # Broker cong cong hay broker rieng (TLS + tai khoan 'laptop') do
+        # config.json quyet dinh — xem common.cau_hinh_mqtt_client().
+        self.host, self.port = cau_hinh_mqtt_client(self.client, cfg, "laptop")
+        self.tls = bool(cfg["mqtt"].get("dung_broker_rieng", False))
+
         self.connected = False
         self.sent_count = 0
         self._client_id = client_id
@@ -349,7 +353,8 @@ class MqttPublisher:
     # ------------------------------------------------------------- vong doi
     def start(self) -> None:
         """Bat dau ket noi. Tra ve ngay, khong doi ket noi xong."""
-        print(f"[mqtt] client_id={self._client_id} -> {self.host}:{self.port}")
+        print(f"[mqtt] client_id={self._client_id} -> {self.host}:{self.port}"
+              f"{'  (TLS, tai khoan laptop)' if self.tls else ''}")
         self.client.connect_async(self.host, self.port, self.keepalive)
         self.client.loop_start()
 

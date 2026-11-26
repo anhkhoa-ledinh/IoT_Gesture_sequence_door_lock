@@ -39,7 +39,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "vision"))
-from common import load_config, resolve_path  # noqa: E402
+from common import cau_hinh_mqtt_client, load_config, resolve_path  # noqa: E402
 
 CHO_CMD_GIAY = 5.0          # sequence -> cmd lau hon muc nay coi la KHONG PHAN HOI
 DU_PHONG_GIAY = 2.0         # cho them sau timeout phia Python truoc khi chot CHUA DU MA
@@ -357,11 +357,13 @@ def main() -> int:
                          client_id="dem10-" + uuid.uuid4().hex[:8])
     client.on_connect, client.on_disconnect, client.on_message = on_connect, on_disconnect, on_message
     client.reconnect_delay_set(min_delay=1, max_delay=16)
-    client.connect_async(m["broker"], int(m["port"]), int(m["keepalive"]))
+    # Broker rieng thi dung tai khoan 'giam_sat' (chi duoc nghe, khong duoc gui).
+    host, port = cau_hinh_mqtt_client(client, cfg, "giam_sat")
+    client.connect_async(host, port, int(m["keepalive"]))
     client.loop_start()
 
     bat_dau = time.time()
-    print(f"Dang nghe {m['broker']}:{m['port']}  ma dung = {bo.ma_dung}")
+    print(f"Dang nghe {host}:{port}  ma dung = {bo.ma_dung}")
     print(f"Model: {mo_ta_model(cfg, co_dau=False)}")
     print("Bam Ctrl+C de dung va lay bang tong ket.\n")
     try:

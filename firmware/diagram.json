@@ -29,7 +29,7 @@
       "id": "bz1",
       "top": 220,
       "left": 150,
-      "attrs": { "volume": "0.1" }
+      "attrs": { "volume": "1" }
     },
     {
       "type": "wokwi-led",

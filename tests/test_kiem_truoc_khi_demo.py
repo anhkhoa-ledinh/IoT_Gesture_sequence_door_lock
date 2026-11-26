@@ -27,6 +27,7 @@ import kiem_truoc_khi_demo as k  # noqa: E402
 
 CFG = json.loads((GOC / "vision" / "config.json").read_text(encoding="utf-8"))
 FLOWS_THAT = json.loads((GOC / "middleware" / "flows.json").read_text(encoding="utf-8"))
+MA_DUNG = CFG["secret"]["default_code"]          # ma dang dung, doc tu config
 
 
 def flow_voi_ma(ma: str, tab: str = "tab_gate", node_id: str = "a_kiem_ma") -> list[dict]:
@@ -124,7 +125,7 @@ def test_flow_dung_context_trong(node_red):
 
 def test_flow_moi_nhung_context_con_giu_ma_cu(node_red):
     # Dung loi am tham: da import flow moi, nhung context van giu ma cu E17C4D.
-    url = node_red(flow_voi_ma("7CE13A"), {"memory": {"ma_hop_le": {"msg": "E17C4D"}}})
+    url = node_red(flow_voi_ma(MA_DUNG), {"memory": {"ma_hop_le": {"msg": "E17C4D"}}})
     kq = k.kiem_node_red(CFG, url)
     assert trang_thai(kq) == [k.PASS, k.FAIL]
     assert "E17C4D" in " ".join(kq[1].chi_tiet)
@@ -179,7 +180,7 @@ CTX_MA_CU = {"memory": {"ma_hop_le": {"msg": "E17C4D"}}}
 
 
 def test_context_lech_kho_bo_nho_chi_khoi_dong_lai(node_red, tmp_path):
-    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    url = node_red(flow_voi_ma(MA_DUNG), CTX_MA_CU)
     kq = k.kiem_node_red(CFG, url, _user_dir(tmp_path, SETTINGS_MAU))
     s = " ".join(kq[1].chi_tiet)
     assert kq[1].trang_thai == k.FAIL
@@ -189,14 +190,14 @@ def test_context_lech_kho_bo_nho_chi_khoi_dong_lai(node_red, tmp_path):
 def test_context_lech_kho_file_chi_thu_muc_can_xoa(node_red, tmp_path):
     ud = _user_dir(tmp_path, SETTINGS_FILE)
     (ud / "context" / "tab_gate").mkdir(parents=True)
-    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    url = node_red(flow_voi_ma(MA_DUNG), CTX_MA_CU)
     s = " ".join(k.kiem_node_red(CFG, url, ud)[1].chi_tiet)
     assert "FILE" in s and "KHONG xoa duoc" in s
     assert str(ud / "context" / "tab_gate") in s and "dang ton tai" in s
 
 
 def test_context_lech_khong_doc_duoc_settings_in_ca_hai_cach(node_red, tmp_path):
-    url = node_red(flow_voi_ma("7CE13A"), CTX_MA_CU)
+    url = node_red(flow_voi_ma(MA_DUNG), CTX_MA_CU)
     s = " ".join(k.kiem_node_red(CFG, url, tmp_path / "khong_co")[1].chi_tiet)
     assert "bo nho" in s and "luu file" in s
 
@@ -207,7 +208,7 @@ def test_thong_bao_sua_khi_node_red_chua_chay():
 
 
 def test_thong_bao_sua_khi_co_hai_node_kiem_ma(node_red):
-    nodes = flow_voi_ma("7CE13A") + flow_voi_ma("7CE13A", tab="tab_cu", node_id="cu")
+    nodes = flow_voi_ma(MA_DUNG) + flow_voi_ma(MA_DUNG, tab="tab_cu", node_id="cu")
     s = " ".join(k.kiem_node_red(CFG, node_red(nodes))[0].chi_tiet)
     assert "Xoa tab flow cu, Deploy, roi Import lai" in s
 
@@ -218,7 +219,7 @@ def test_flow_cu_chua_import_lai(node_red):
 
 
 def test_hai_flow_kiem_ma_cung_chay(node_red):
-    nodes = flow_voi_ma("7CE13A") + flow_voi_ma("E17C4D", tab="tab_cu", node_id="cu")
+    nodes = flow_voi_ma(MA_DUNG) + flow_voi_ma("E17C4D", tab="tab_cu", node_id="cu")
     kq = k.kiem_node_red(CFG, node_red(nodes))
     assert trang_thai(kq) == [k.FAIL]
     assert "2 NODE KIEM MA" in " ".join(kq[0].chi_tiet)
