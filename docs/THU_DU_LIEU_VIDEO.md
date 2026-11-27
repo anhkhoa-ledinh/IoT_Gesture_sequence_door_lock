@@ -24,7 +24,6 @@ cách nhìn khác của cùng cử chỉ:
 
 | Thay đổi | Ví dụ |
 |---|---|
-| **Người** | Khoa, Quang, bạn cùng lớp, người nhà — càng nhiều người càng tốt |
 | **Chỗ / nền** | phòng ngủ, lớp học, hành lang |
 | **Ánh sáng** | đèn trần, cạnh cửa sổ, tối hơn bình thường |
 | **Tay** | tay phải, tay trái (mỗi tay một video riêng) |
