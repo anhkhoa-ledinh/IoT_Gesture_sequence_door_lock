@@ -106,7 +106,7 @@ Sau đó mở `vision\train_classifier.ipynb` → **Run All**, rồi
 | `--tay phai` / `--tay trai` | tự đoán theo đa số khung | khi script báo MediaPipe đoán ngược tay nhiều |
 | `--thu-muc <đường dẫn>` | `data_video\` | để video ở ổ khác |
 
-## 7. Script làm gì bên trong (để trả lời khi bị hỏi)
+## 7. Công dụng của Scripts
 
 1. Lấy 1 khung mỗi 0.2 giây, bỏ 0.7 giây đầu và cuối.
 2. Lật ngang khung giống `gesture_lock.py`, chạy MediaPipe HandLandmarker, bỏ khung không thấy tay.
